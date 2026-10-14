@@ -1,0 +1,20 @@
+# Data and artifacts (never commit raw data: CC BY-NC-SA licence)
+data/raw/*
+data/interim/*
+data/processed/*
+models/*
+!**/.gitkeep
+
+# Secrets
+.env
+kaggle.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/
+.DS_Store

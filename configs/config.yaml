@@ -1,0 +1,62 @@
+# OnTime configuration. Every path/parameter used by code comes from here.
+# Values marked PROVISIONAL are finalized after EDA (Phase 3) and logged in docs/DECISIONS_LOG.md.
+
+seed: 42
+
+paths:
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+  models_dir: models
+  reports_dir: reports
+  figures_dir: reports/figures
+  orders_parquet: data/interim/orders.parquet
+  features_parquet: data/processed/features.parquet
+
+kaggle:
+  dataset: olistbr/brazilian-ecommerce
+
+# Raw CSV file names expected in raw_dir (as shipped by Kaggle)
+raw_files:
+  orders: olist_orders_dataset.csv
+  order_items: olist_order_items_dataset.csv
+  products: olist_products_dataset.csv
+  sellers: olist_sellers_dataset.csv
+  customers: olist_customers_dataset.csv
+  geolocation: olist_geolocation_dataset.csv
+  payments: olist_order_payments_dataset.csv
+  reviews: olist_order_reviews_dataset.csv
+  category_translation: product_category_name_translation.csv
+
+# Time-based splits on order_approved_at. PROVISIONAL (Phase 3 finalizes).
+splits:
+  train_end: "2018-01-31"
+  val_start: "2018-02-01"
+  val_end: "2018-04-30"
+  test_start: "2018-05-01"
+  # Orders approved after this are dropped: most are still undelivered (censoring).
+  censoring_cutoff: "2018-08-01"   # PROVISIONAL, determined from delivered-share plot in Phase 2
+
+# Brazil bounding box used to drop bad geolocation points
+geo:
+  lat_min: -34.0
+  lat_max: 6.0
+  lng_min: -74.0
+  lng_max: -34.0
+
+features:
+  shrinkage_alpha: 20          # pseudo-count for Bayesian shrinkage of late rates
+  recent_window_days: 90
+  load_window_days: 7
+  global_window_days: 30
+  black_friday_window_days: 3  # +/- days around Black Friday
+  black_friday_dates: ["2016-11-25", "2017-11-24", "2018-11-23"]
+  rare_category_min_count: 500 # PROVISIONAL; rarer categories -> "other"
+
+policy:
+  capacity_grid: [0.05, 0.10, 0.20]          # fraction of daily orders ops can act on
+  intervention_success_grid: [0.1, 0.2, 0.3, 0.5]  # ASSUMED prob. an intervention prevents lateness
+
+tuning:
+  optuna_trials: 50
+  bootstrap_resamples: 1000
