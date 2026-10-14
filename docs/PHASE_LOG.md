@@ -667,8 +667,9 @@ and keeps the Phase 7 headline numbers untouched.
    (stage 1: 0.75, 0.78, 0.64, 0.57): the decay disappears. Simulated policy at 10% capacity and
    30% success: ~154 late orders prevented (14% of late) vs ~79 at approval and ~35 for random.
    Late orders have a median ~10 days left at handover (70% have 3+ days).
-5. **Deployment hardening.** `make scores` precomputes the app's test scores (cold start 4-5 s to
-   about 2 s for the heavy pages); `make bundle` builds a ~26 MB self-contained `deploy` branch (app,
+5. **Deployment hardening.** `make scores` precomputes the app's test scores (first render of
+   Overview and Ops queue about 4 s -> 0.4-1.6 s; the Order explorer still loads three models,
+   about 4 s on first use); `make bundle` builds a ~26 MB self-contained `deploy` branch (app,
    src, artifacts, runtime-only `requirements.txt`) from a temporary repo, so `main` stays free of
    data and models. Verified by installing ONLY requirements.txt in a fresh virtual environment and
    rendering all six pages from the bundle.
@@ -695,9 +696,9 @@ and keeps the Phase 7 headline numbers untouched.
 
 **Mistakes and course corrections in this phase**
 - The first monitor design alerted every month (above).
-- An early "ablation by feature subset" on the pipeline helper broke on a subset without
-  `approve_month` (a calendar integer one-hot encoded as a string); fixed by making the string
-  cast tolerate missing columns.
+- Anticipated, then fixed before running: the linear pipeline's string cast assumed `approve_month`
+  (a calendar integer one-hot encoded as a string) was always present, which would have broken
+  every no-proxy variant; it now tolerates missing columns.
 - A patch script asserted against pre-formatting text and wrote nothing; re-done against the real file.
 
 **Tests:** 143 passing (monitoring 11, stage 2 9+1 integration, reporting, app 10). Ruff clean.
