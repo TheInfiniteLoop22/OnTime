@@ -1,4 +1,4 @@
-﻿# Reason-code wording: ONE place, reviewable by non-engineers.
+# Reason-code wording: ONE place, reviewable by non-engineers.
 #
 # How it works (FEATURE_SPEC section 7):
 #   1. A model gives, per order, a contribution (in log-odds) for every feature.

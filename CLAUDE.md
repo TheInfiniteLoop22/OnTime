@@ -69,7 +69,7 @@ ontime/
 │   ├── explain/          # shap_explain.py, ebm_explain.py, reason_codes.py, agreement.py
 │   ├── analysis/         # impact.py (late delivery → review score)
 │   └── pipeline.py       # CLI entry: python -m ontime.pipeline <stage>
-├── app/                  # Streamlit: Home.py + pages/
+├── app/                  # Streamlit: Home.py + views/ (not pages/: see DECISIONS_LOG D-069)
 ├── models/               # gitignored saved models
 ├── reports/              # figures/, results.json, results.md, model_card.md
 └── tests/

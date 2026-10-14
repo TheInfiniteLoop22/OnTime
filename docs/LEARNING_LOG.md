@@ -265,3 +265,29 @@ reminder not to read single coefficients, not proof one model is wrong.
 **What can explanations NOT tell you?** Causes. They describe how the model uses information
 available at approval time; unexplained delays (the false-negative case) are information the
 model never had.
+
+
+---
+
+## Phase 9 - The app
+
+**How does the app avoid recomputing everything on every click?** Streamlit reruns the script
+top to bottom on each interaction. `st.cache_resource` keeps heavy objects (loaded models) alive
+across reruns; `st.cache_data` memoizes functions that return data (scoring the test period,
+reading JSON). The first visit pays the scoring cost, later interactions only run the cheap parts.
+
+**Why show bands instead of probabilities?** Probabilities drift when the base rate moves and are
+overconfident at the top end (Phase 7). Operations act on a fixed daily capacity, so rank within the
+day is both more honest and more useful.
+
+**What is the what-if panel really doing?** It edits one lever, recomputes the features that are
+mathematically derived from it, and re-scores. That measures how the *model* responds, which is
+useful for understanding; it does not prove that lengthening a real promise would change delivery.
+
+**How did you test a UI?** Streamlit's headless AppTest runs each page and lets a test move
+sliders and read metrics (functional check). Visual quality needs eyes: screenshots from a headless
+browser on a fresh server, including deep links. The deep-link bug was only visible that way.
+
+**What would you do for production?** Precompute scores in a batch job, serve them from a store,
+add monitoring for drift and calibration, retrain on a schedule, and put the scoring service behind
+an API with the same decomposition checks as unit tests.

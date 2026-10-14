@@ -501,3 +501,73 @@ reviews 10); agreement report exists.
 the sentences read naturally; wording lives in `configs/reason_templates.yaml`.
 
 **Verification:** pytest 97 passed; ruff clean; notebook 04 executes with no errors.
+
+
+---
+
+## Phase 9 - Streamlit app (2026-10-14)
+
+**Goal:** five pages that load precomputed artifacts, score single orders live, and keep every
+displayed number traceable to a generated file; UI must be clear and good-looking.
+
+**Acceptance (BUILD_PLAN):** `make app` runs with no errors; pages load in < 3 s after cache
+warm-up; no number hardcoded; every chart has a one-line caption; what-if recomputes dependent
+features.
+
+**Built**
+- `src/ontime/serving/service.py` - `RiskService` (live scoring, grouped contributions, reason
+  codes, promise sweep) and `recompute_dependent_features` (what-if). Logic stays in `src/`.
+- `app/Home.py` - entrypoint + `st.navigation`; `app/ontime_ui/` - `theme.py` (tokens, CSS, shared
+  Plotly look), `components.py` (KPI cards, risk badge, reason lists, callouts, captions),
+  `data.py` (cached loaders, friendly stop if artifacts are missing).
+- `app/views/` - **Overview**, **Order risk explorer** (4 tabs: why / what-if / compare models /
+  details), **Ops queue & policy simulator**, **Seller scorecard**, **Model insights** (6 tabs).
+- `.streamlit/config.toml` (theme), `make app`. Tests: `tests/test_serving.py` (5),
+  `tests/test_app.py` (9, headless AppTest incl. what-if and capacity interactions). Suite: 111.
+- Screenshots of every page in `docs/assets/` (rendered from the running app via headless Chrome).
+
+**UI design decisions in one place**
+- Light theme, one validated categorical palette (blue, orange, aqua, violet), reserved status
+  colours for risk bands that always carry an icon and label. Palette checked with the dataviz
+  validator: worst adjacent CVD delta-E 9.1, normal-vision 22.9 (passes); aqua/yellow sit below 3:1
+  contrast on the light surface, so those series are direct-labelled and every chart has a table.
+- No dual-axis charts: volume and rate are stacked sub-plots sharing the x-axis.
+- Risk **bands come from within-day rank**, not probability (D-068).
+- "Reveal actual outcome" is OFF by default so users judge the reasons before the answer.
+- Probabilities shown as whole percentages and labelled a relative score.
+
+**Verification**
+- AppTest: every page renders without exceptions; what-if slider changes the estimate; capacity
+  slider changes the queue; overview numbers match results.json.
+- Timing (AppTest, this machine): cold first render about 4-5 s because the test period is scored
+  for three models once (cached); subsequent interactions 0.6-1.3 s; seller page 3.3 s on first
+  visit. The cold start exceeds the 3 s target; warm interactions meet it.
+- Visual review via screenshots of all pages and of the what-if tab; defects found that way and
+  fixed: uneven KPI cards, chart label collisions, platform line starting at 100% from a one-order
+  month, "0%" progress bars, truncated reasons, "Top 0%" rank, hardcoded caption numbers,
+  mojibake characters.
+- Numbers shown match Phase 7 exactly (e.g. 10% capacity, 30% success: 74 prevented, +40 over
+  random, ceiling 306).
+
+**Incidents during this phase (kept for honesty)**
+1. **Deep-link bug.** With a `pages/` folder, opening `/risk_explorer` on a fresh server runs that
+   page as a legacy multipage app: `Home.py` never executes, so no navigation menu and no
+   page config. Fixed by renaming the folder to `views/` (D-069). Found only because I
+   screenshotted a deep link as the first request on a fresh server.
+2. **Accidental deletion.** `git mv` failed (files were untracked) and a following `Remove-Item`
+   deleted `app/pages`. The five page files were rebuilt from the source written in this session,
+   re-verified by tests and screenshots, and committed immediately. Lesson recorded in memory.
+3. **Chrome profiles committed.** My screenshot helper wrote browser profiles inside the repo and
+   `git add -A` staged 6,683 files in a local, unpushed commit. Undone with a soft reset; folders
+   removed, profile dir moved to a temp folder, `.gitignore` updated. Nothing was pushed.
+4. **Encoding damage.** PowerShell 5.1 `Get-Content/Set-Content` double-encoded `·` to `Â·` in
+   two app files. Fixed; all further edits made with Python/the Edit tool.
+5. **Lint autofix broke a format string.** Caught by the page smoke test, rewritten plainly.
+
+**Open items**
+- Streamlit Community Cloud deployment needs a small precomputed artifact bundle (models,
+  features subset, reports) because `data/` and `models/` are gitignored: Phase 10.
+- Cold-start scoring could be precomputed to a parquet to get under 3 s on first load.
+- Single light theme (no dark mode).
+
+**Verification summary:** pytest 111 passed; ruff clean; all five pages screenshotted and reviewed.

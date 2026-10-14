@@ -1,4 +1,4 @@
-﻿# OnTime configuration. Every path/parameter used by code comes from here.
+# OnTime configuration. Every path/parameter used by code comes from here.
 # Values marked PROVISIONAL are finalized after EDA (Phase 3) and logged in docs/DECISIONS_LOG.md.
 
 seed: 42

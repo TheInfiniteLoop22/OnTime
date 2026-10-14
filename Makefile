@@ -1,4 +1,4 @@
-﻿.PHONY: setup data build features baselines train evaluate explain impact notebooks app test lint format all
+.PHONY: setup data build features baselines train evaluate explain impact notebooks app test lint format all
 
 PY = uv run python
 

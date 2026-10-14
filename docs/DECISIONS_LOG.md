@@ -380,3 +380,40 @@ New entries are appended at the end of every phase. Numbers cited here come from
 - **Why:** removing `approve_month`/holiday features changes the model after the test set was
   opened; a clean v2 needs a new validation cycle. Recorded as the first follow-up and shown
   openly in the case studies.
+
+
+---
+
+### D-067 - Live scoring, explanations and what-if live in `src/ontime/serving` (Phase 9)
+- **Alternatives:** compute inside Streamlit pages.
+- **Why:** CLAUDE.md rule 6 and testability: the what-if recomputation and decomposition checks
+  run without a browser, and a future FastAPI `/score` endpoint (stretch S3) reuses the service.
+
+### D-068 - Risk bands are derived from within-day rank, not probability (Phase 9)
+- **Alternatives:** thresholds on the predicted probability (e.g. >30% = high).
+- **Why:** Phase 7 showed probabilities are overconfident at the top end and shift with the base
+  rate; rank within the day is what operations actually acts on (capacity per day). Bands use the
+  configured capacity tiers (top 5% = High, up to top 20% = Elevated).
+
+### D-069 - App views live in `app/views/`, not `app/pages/` (Phase 9)
+- **Why:** with a `pages/` folder, Streamlit treats a deep link as a legacy multipage app on a
+  fresh server and never runs `Home.py` (no navigation, no page config). `views/` plus
+  `st.navigation` avoids the legacy auto-discovery. CLAUDE.md layout updated.
+
+### D-070 - Palette validated by script; no dual axes; direct labels where contrast is low (Phase 9)
+- **Why:** colour accessibility is computable. Chosen order blue, orange, aqua, violet passes the
+  adjacent CVD and normal-vision gates; aqua is below 3:1 contrast on the light surface so series
+  are labelled and tables are provided. Volume and rate use stacked sub-plots, never two y-axes.
+
+### D-071 - What-if recomputes only features derived from the edited lever, and says so (Phase 9)
+- **Why:** promise edits change `promised_days` and `promise_per_1000km`; freight edits change
+  `total_freight` and `freight_ratio`. Everything else is a fact of the order. The page states
+  it shows model sensitivity, not a causal effect (the dataset contains no experiment on the promise).
+
+### D-072 - Light theme only; deployment bundle deferred to Phase 10 (Phase 9)
+- **Why:** one validated palette is better than two unvalidated ones; deployment needs a small
+  artifact bundle because raw data and models are not in git.
+
+### D-073 - Outcome hidden by default; probabilities shown as whole percentages (Phase 9)
+- **Why:** reasons should be judged before the answer is known; two decimals would imply a
+  precision the model does not have.

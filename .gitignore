@@ -21,3 +21,7 @@ __pycache__/
 
 # dry-run evaluation on validation (not a result)
 reports/dryrun/
+
+# headless-chrome profiles from screenshot tooling
+reports/app_screens/*.profile/
+reports/app_screens/

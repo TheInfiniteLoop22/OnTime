@@ -48,7 +48,7 @@ packages = ["src/ontime"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "tests", "app"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
@@ -65,3 +65,4 @@ pythonpath = ["src"]
 
 "src/ontime/evaluation/report.py" = ["E501"]
 "src/ontime/evaluation/run.py" = ["E501"]
+"app/**/*.py" = ["E501", "E402"]  # UI copy and sys.path setup before imports
