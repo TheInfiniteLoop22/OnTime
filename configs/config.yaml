@@ -1,5 +1,5 @@
 # OnTime configuration. Every path/parameter used by code comes from here.
-# Values marked PROVISIONAL are finalized after EDA (Phase 3) and logged in docs/DECISIONS_LOG.md.
+# Values marked PROVISIONAL are finalized after EDA (Phase 3).
 
 seed: 42
 
@@ -31,7 +31,7 @@ raw_files:
   reviews: olist_order_reviews_dataset.csv
   category_translation: product_category_name_translation.csv
 
-# Time-based splits on order_approved_at. FINALIZED in Phase 3 (see docs/DECISIONS_LOG.md D-022):
+# Time-based splits on order_approved_at. FINALIZED in Phase 3:
 # keeps >1,000 late orders in test for stable PR-AUC intervals.
 splits:
   train_end: "2018-01-31"
@@ -98,7 +98,7 @@ monitoring:
     customer_state_late_rate_shrunk, route_late_rate_shrunk, seller_late_rate_shrunk,
     seller_late_rate_90d_shrunk, seller_load_7d]
 
-rolling:                      # v2 study: monthly retraining backtest (see docs/PHASE_LOG.md)
+rolling:                      # v2 study: monthly retraining backtest
   first_month: "2018-02-01"
   last_month: "2018-08-01"
   min_train_orders: 5000

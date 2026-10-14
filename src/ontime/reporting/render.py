@@ -1,7 +1,7 @@
 """Generate README.md and reports/model_card.md from the project's result files.
 
 CLAUDE.md rule 5: no number may be written into README/reports that was not produced by code.
-The prose lives in templates (docs/templates/*.md) with {{placeholders}}; every placeholder is
+The prose lives in templates (reporting/templates/*.md) with {{placeholders}}; every placeholder is
 filled from results.json, validation_results.json, impact.json, explain_summary.json, the feature
 table or the config. A missing value raises: a README can never ship with a stale or invented number.
 """
@@ -12,6 +12,7 @@ import json
 import logging
 import re
 from importlib import metadata
+from pathlib import Path
 
 import pandas as pd
 
@@ -19,7 +20,7 @@ from ontime.config import PROJECT_ROOT, load_config, project_path
 from ontime.features.build import FEATURE_COLUMNS
 
 log = logging.getLogger(__name__)
-TEMPLATES = PROJECT_ROOT / "docs" / "templates"
+TEMPLATES = Path(__file__).parent / "templates"
 LABEL = {
     "logreg": "Logistic regression",
     "lightgbm": "LightGBM",

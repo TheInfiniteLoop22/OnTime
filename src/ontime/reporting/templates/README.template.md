@@ -10,7 +10,7 @@ Built on the public [Olist Brazilian E-Commerce dataset](https://www.kaggle.com/
 with classical ML only (logistic regression, EBM, LightGBM, random forest). No deep learning.
 
 > This file is **generated** by `make report` from the project's result files, so every number
-> below was produced by code in this repository (see `docs/templates/README.template.md`).
+> below was produced by code in this repository (see `src/ontime/reporting/templates/`).
 
 ---
 
@@ -217,10 +217,10 @@ make app        # streamlit run app/Home.py   (needs the pipeline artifacts)
 
 | | |
 |---|---|
-| ![Overview](docs/assets/app_overview.png) | ![Order risk explorer](docs/assets/app_risk_explorer.png) |
-| ![What-if](docs/assets/app_what_if.png) | ![Ops queue and policy simulator](docs/assets/app_ops_queue.png) |
-| ![Seller scorecard](docs/assets/app_seller_scorecard.png) | ![Model insights](docs/assets/app_model_insights.png) |
-| ![Stage 2](docs/assets/app_stage2.png) | ![Drift monitor](docs/assets/app_drift_monitor.png) |
+| ![Overview](assets/app_overview.png) | ![Order risk explorer](assets/app_risk_explorer.png) |
+| ![What-if](assets/app_what_if.png) | ![Ops queue and policy simulator](assets/app_ops_queue.png) |
+| ![Seller scorecard](assets/app_seller_scorecard.png) | ![Model insights](assets/app_model_insights.png) |
+| ![Stage 2](assets/app_stage2.png) | ![Drift monitor](assets/app_drift_monitor.png) |
 
 ## Run it yourself
 
@@ -265,7 +265,7 @@ runs the real stages on it, so CI never needs the Kaggle download.
 | `app/` | Streamlit app (`Home.py`, `views/`, `ontime_ui/`) |
 | `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability, 05 diagnosing the decay and the handover stage, 06 promise dates and the API |
 | `reports/` | generated results, model card, figures (the data and models are git-ignored) |
-| `docs/` | specs, `PHASE_LOG.md` (what was done), `DECISIONS_LOG.md` (why), `LEARNING_LOG.md` (interview notes) |
+| `assets/` | app screenshots used in this README |
 
 ## Limitations
 
@@ -301,10 +301,6 @@ Olist Brazilian E-Commerce Public Dataset, CC BY-NC-SA 4.0: non-commercial use, 
 required, share alike. The raw data is **not** committed; download it yourself. Code in this
 repository is for portfolio/educational use.
 
-## Documentation
+## More
 
-[`docs/PROJECT_SPEC.md`](docs/PROJECT_SPEC.md) · [`docs/FEATURE_SPEC.md`](docs/FEATURE_SPEC.md) ·
-[`docs/BUILD_PLAN.md`](docs/BUILD_PLAN.md) · [`docs/PHASE_LOG.md`](docs/PHASE_LOG.md) ·
-[`docs/DECISIONS_LOG.md`](docs/DECISIONS_LOG.md) · [`docs/LEARNING_LOG.md`](docs/LEARNING_LOG.md) ·
-[`reports/model_card.md`](reports/model_card.md) · [`reports/results.md`](reports/results.md) ·
-[`reports/impact.json`](reports/impact.json)
+[`reports/model_card.md`](reports/model_card.md) · [`reports/results.md`](reports/results.md) · [`reports/impact.json`](reports/impact.json)

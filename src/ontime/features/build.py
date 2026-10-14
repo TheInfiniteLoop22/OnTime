@@ -21,7 +21,7 @@ from ontime.models.splits import assign_split
 
 log = logging.getLogger(__name__)
 
-# ----- feature families (names follow docs/FEATURE_SPEC.md) -----------------------------------
+# ----- feature families (grouped by family) -----------------------------------
 GEO_FEATURES = [
     "distance_km",
     "log_distance_km",

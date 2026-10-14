@@ -25,3 +25,9 @@ reports/dryrun/
 # headless-chrome profiles from screenshot tooling
 reports/app_screens/*.profile/
 reports/app_screens/
+
+# local working docs and generated tables (not part of the published project)
+docs/
+CLAUDE.md
+reports/*.csv
+reports/*.parquet

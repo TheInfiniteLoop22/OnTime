@@ -29,7 +29,9 @@ def test_render_raises_on_missing_value():
 
 def test_templates_only_use_known_placeholder_syntax():
     for name in ("README.template.md", "model_card.template.md"):
-        text = (PROJECT_ROOT / "docs" / "templates" / name).read_text(encoding="utf-8")
+        text = (PROJECT_ROOT / "src" / "ontime" / "reporting" / "templates" / name).read_text(
+            encoding="utf-8"
+        )
         assert "{{" not in PLACEHOLDER.sub("", text), "malformed placeholder in " + name
 
 
