@@ -291,3 +291,67 @@ browser on a fresh server, including deep links. The deep-link bug was only visi
 **What would you do for production?** Precompute scores in a batch job, serve them from a store,
 add monitoring for drift and calibration, retrain on a schedule, and put the scoring service behind
 an API with the same decomposition checks as unit tests.
+
+
+---
+
+# Interview prep - the ten questions, with answer outlines
+Numbers are intentionally not repeated here: quote them from `reports/results.md` and
+`reports/model_card.md`, which are generated from the run.
+
+**1. Why PR-AUC and not accuracy or ROC-AUC?** Late orders are rare, so "never late" is highly
+accurate and useless. ROC-AUC is flattered by the huge on-time majority. PR-AUC tracks precision and
+recall on the rare class; its floor is the base rate, so always quote it next to that floor. (Phase 3, 5)
+
+**2. How exactly did you prevent leakage in the seller late-rate?** A past order counts only if it
+was *delivered* before the current order's approval time. Approval time alone is not enough: that order
+may still be in transit and its lateness is future information. Five required tests plus a property test
+against a brute-force loop, and a measured demonstration that the leaky versions look better. (Phase 4)
+
+**3. Why a time-based split? What would random have done?** Lateness comes in episodes, so random
+splits put neighbours from the same bad week in train and test and inflate every metric. Time splits mimic
+deployment and also exposed the regime shift. (Phase 3, 5)
+
+**4. What is calibration and why does it matter here?** Among orders scored 0.3, about 30% should be
+late. The app shows a probability to humans, and class weighting breaks the score scale. We compared none,
+sigmoid and isotonic on data *later* than the fit data, and found calibration is hostage to the base rate.
+(Phase 6, 7)
+
+**5. What is an EBM; how is it different from a GAM and from boosting?** A GAM is a sum of one smooth
+function per feature. An EBM is a GAM whose functions are learned by cyclic boosting with tiny trees, with a
+few pairwise terms: boosting-level accuracy, GAM-level readability. (Phase 6, 8)
+
+**6. What do SHAP values mean and what are their limits?** Average marginal contribution of a feature
+over all feature orderings; they add up from the average prediction to this one. With correlated
+features credit is split arbitrarily, and SHAP explains the model, not the world. (Phase 8)
+
+**7. How did you choose k / the threshold; why not 0.5?** Operations has a daily capacity, so the
+decision is "top k% of each day", evaluated per day. A 0.5 threshold would select almost nothing at a
+single-digit base rate. k comes from capacity, not from the data. (Phase 5, 7)
+
+**8. Is the review-score effect causal?** No: adjusted association. Threats: unobserved seller or order
+difficulty, selection into reviewing, time-varying carrier problems. Seller fixed effects and the
+after-delivery sensitivity analysis reduce, not remove, them. The surprise: most late orders are reviewed
+*before* arrival. (Phase 3)
+
+**9. How does Bayesian shrinkage help sellers with few orders?** (late + alpha*prior)/(n + alpha):
+a new seller is judged mostly on the platform average, an established one on their own record. It stops
+a handful of deliveries from deciding a seller's fate. Worked example in Phase 4 notes.
+
+**10. Where does it fail and what next?** Slices (some regions, later months), orders delayed for
+reasons invisible at approval, and decay over time after training. Next: expanding-window CV, drop the
+calendar proxies, drift monitoring, a randomized pilot for the intervention success rate. (Phase 7, 10)
+
+## Phase 10 - Documentation and polish
+
+**Why generate the README?** CLAUDE.md rule 5: no number may be typed by hand. A README whose
+numbers come from the same files as the results cannot drift from them, and a missing value raises
+instead of leaving a blank.
+
+**Why a synthetic dataset in CI?** The real pipeline runs end to end on a tiny Olist-shaped dataset in
+seconds, so every push exercises the SQL, schemas, features and leakage logic without the Kaggle download
+or the licence concern of redistributing data.
+
+**What is a model card?** A one-page, standard disclosure: what the model is for and not for, the data,
+metrics by period and slice, calibration, limits and ethical considerations. It is the artefact a
+reviewer or a new teammate reads first.

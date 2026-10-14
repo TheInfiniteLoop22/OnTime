@@ -81,6 +81,13 @@ def stage_explain() -> None:
     run_explain()
 
 
+def stage_report() -> None:
+    """Generate README.md and reports/model_card.md from the result files."""
+    from ontime.reporting.render import build_reports
+
+    build_reports()
+
+
 def stage_train() -> None:
     """Tune, fit, calibrate and evaluate all models on validation; save to models/."""
     from ontime.models.run import run_training
@@ -89,6 +96,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "report": stage_report,
     "explain": stage_explain,
     "evaluate": stage_evaluate,
     "train": stage_train,

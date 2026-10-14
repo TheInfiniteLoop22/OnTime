@@ -157,7 +157,7 @@ def make_tiny_olist(out_dir: Path, n_orders: int = 1800, seed: int = 0) -> Path:
                 {"order_id": oid, "order_item_id": j,
                  "product_id": products["product_id"].iloc[int(rng.integers(0, n_prod))],
                  "seller_id": s_use,
-                 "shipping_limit_date": pd.Timestamp("2018-01-01"),  # reset below, relative to approval
+                 "shipping_limit_date": pd.Timestamp("2018-01-01"),  # reset below
                  "price": float(np.round(rng.uniform(10, 400), 2)),
                  "freight_value": float(np.round(rng.uniform(5, 60), 2))}
             )  # fmt: skip

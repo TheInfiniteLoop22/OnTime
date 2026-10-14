@@ -571,3 +571,54 @@ features.
 - Single light theme (no dark mode).
 
 **Verification summary:** pytest 111 passed; ruff clean; all five pages screenshotted and reviewed.
+
+
+---
+
+## Phase 10 - Documentation & polish (2026-10-14)
+
+**Goal:** a stranger can clone, add Kaggle credentials, run `make all && make app`, and
+understand the project from the README alone.
+
+**Acceptance (BUILD_PLAN):** README; `reports/model_card.md`; `notebooks/03_modeling_walkthrough.ipynb`;
+finalized LEARNING_LOG; CI running ruff + pytest on a small fixture dataset.
+
+**Built**
+- `docs/templates/README.template.md` and `model_card.template.md` + `src/ontime/reporting/render.py`:
+  `make report` fills every placeholder from the result files (a missing value raises). Output:
+  `README.md` (problem, impact, mermaid diagram, results, explainability example, screenshots, run
+  instructions, repo map, limitations, future work) and `reports/model_card.md` (Mitchell et al.
+  sections: details, intended use, data, metrics, calibration, stability, slices, explainability,
+  ethics, caveats).
+- `notebooks/03_modeling_walkthrough.ipynb` (21 cells) driven by `src/ontime/reporting/walkthrough.py`;
+  inferences computed, claims checked against executed output.
+- `tests/fixtures.py` (synthetic mini-Olist generator, with the dataset's quirks) and
+  `tests/test_pipeline_integration.py`: the REAL stages (load + pandera, DuckDB table, features with
+  leak-safe history, baselines, split lock) run end to end on 1,800 synthetic orders in ~3 s.
+  `ONTIME_CONFIG` environment variable lets tests redirect all paths without touching real data.
+- `tests/test_reporting.py`; Makefile: `make report`, `make all` re-ordered (impact before
+  evaluate, report last), `make notebooks` now runs all four notebooks.
+- LEARNING_LOG: ten interview questions with answer outlines (numbers referenced, not repeated).
+- PROJECT_SPEC deliverables checklist ticked.
+
+**Verification**
+- pytest 121 passed; ruff check and format clean.
+- `make -n all` shows the stage order data, build, impact, features, baselines, train, evaluate,
+  explain, report.
+- Clean-clone check in a scratch directory: `uv sync` then `pytest` and `ruff` pass with no data or
+  models present (artifact-dependent tests skip; the integration test runs on fixtures).
+
+**What the finished project is (summary for the owner)**
+- Ten phases built and documented; 4 narrative notebooks; a 5-page app; model card and README
+  generated from results; 121 automated tests including leakage, decomposition and page tests.
+- Headline (test period): primary model is logistic regression with PR-AUC about 2x the base rate,
+  lift about 2.2x at 10% daily capacity; no reliable accuracy gap between the EBM and LightGBM; the
+  hand-written rule was no better than guessing out of time; ranking skill decays over the months
+  after training; probabilities are overconfident at the top end. All figures in
+  `reports/results.md` and the model card.
+
+**Not done / owner decisions**
+- Streamlit Community Cloud deployment (needs an artifact bundle, your account, and a licence
+  decision: the dataset is CC BY-NC-SA). Instructions in the README.
+- Optional stretch phases S1 (quantile ETA), S2 (drift monitoring), S3 (FastAPI + Docker).
+- Code licence file (your choice).

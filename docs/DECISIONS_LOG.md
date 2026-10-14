@@ -417,3 +417,30 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-073 - Outcome hidden by default; probabilities shown as whole percentages (Phase 9)
 - **Why:** reasons should be judged before the answer is known; two decimals would imply a
   precision the model does not have.
+
+
+---
+
+### D-074 - README and model card are generated from result files (Phase 10)
+- **Alternatives:** write them by hand and copy numbers.
+- **Why:** CLAUDE.md rule 5. A generated README cannot go stale and a missing value raises
+  instead of leaving a blank. Prose lives in templates for easy editing. Cost: editing the
+  README means editing the template.
+
+### D-075 - CI runs the real pipeline on a synthetic Olist-shaped dataset (Phase 10)
+- **Alternatives:** download Kaggle data in CI; commit a sample of the real data; skip pipeline
+  tests in CI.
+- **Why:** needs no credentials, avoids redistributing CC BY-NC-SA data, and exercises the actual
+  SQL, schemas, features and leakage logic in seconds. The data is random: it tests code paths,
+  not model quality. Done with an `ONTIME_CONFIG` override so no production path is mocked.
+
+### D-076 - Deployment is documented, not automated (Phase 10)
+- **Why:** it needs the owner's Streamlit account, an artifact bundle (models and features are
+  git-ignored) and a decision on publishing derived data from a non-commercial licence.
+
+### D-077 - `make all` order: impact before evaluate, report last (Phase 10)
+- **Why:** the results report quotes the review-star gap from impact.json; README and model card
+  need every other artifact, so they are generated last.
+
+### D-078 - Notebook 03 helpers live in `src/ontime/reporting/walkthrough.py` (Phase 10)
+- **Why:** CLAUDE.md rule 6 (notebooks import and narrate); the same tables can be reused or tested.

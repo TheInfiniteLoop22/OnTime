@@ -1,4 +1,4 @@
-.PHONY: setup data build features baselines train evaluate explain impact notebooks app test lint format all
+.PHONY: setup data build features baselines train evaluate explain impact report notebooks app test lint format all
 
 PY = uv run python
 
@@ -30,9 +30,14 @@ explain:
 impact:
 	$(PY) -m ontime.pipeline impact
 
+report:
+	$(PY) -m ontime.pipeline report
+
 notebooks:
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/02_impact_analysis.ipynb
+	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/03_modeling_walkthrough.ipynb
+	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/04_explainability.ipynb
 
 app:
 	uv run streamlit run app/Home.py
@@ -48,4 +53,4 @@ format:
 	uv run ruff check --fix .
 	uv run ruff format .
 
-all: data build features train evaluate explain impact
+all: data build impact features baselines train evaluate explain report
