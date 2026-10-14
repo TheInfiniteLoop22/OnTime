@@ -341,3 +341,42 @@ New entries are appended at the end of every phase. Numbers cited here come from
 - **Why:** the tuned nonlinear models did not beat plain logistic regression and the rule
   baseline collapsed on test. These are the findings; any story of "the better model needs
   more tuning" would require touching the test set again, which is not allowed.
+
+---
+
+### D-060 - Explain three models with exact additive decompositions in log-odds (Phase 8)
+- **Alternatives:** SHAP for everything (model-agnostic KernelSHAP); LIME.
+- **Why:** each family has an exact native decomposition (coefficients, EBM terms, TreeSHAP), so
+  explanations are not approximations and the sum-to-logit identity can be unit-tested. A
+  shared unit (log-odds) lets reason codes and agreement checks treat models uniformly.
+
+### D-061 - EBM interactions split equally between their two features (Phase 8)
+- **Why:** reason groups work at feature level. An equal split is simple, symmetric and keeps the
+  additive identity. Cost: attribution inside an interaction is a convention, not a measurement.
+
+### D-062 - Reason sentences state facts; the sign supplies the verdict (Phase 8)
+- **Alternatives:** direction-aware adjectives ("tight promise", "weak record").
+- **Why:** learned directions can contradict intuition (`global_late_rate_30d`), and an
+  adjective that disagrees with its own number destroys trust. Cost: sentences are less
+  vivid. The exception policy: reintroduce an adjective only for features whose direction is
+  verified and stable in all three models.
+
+### D-063 - Group related features into 16 reasons before ranking (Phase 8)
+- **Why:** FEATURE_SPEC section 7. Summing e.g. distance_km, log_distance_km and
+  promise_per_1000km prevents one idea appearing as three reasons and hides sign flips between
+  collinear siblings. Test: every feature maps to exactly one group and one template.
+
+### D-064 - Global explanations on validation; reason codes on test (Phase 8)
+- **Why:** global importances should not be fitted to test behaviour; per-order codes are
+  produced on test because that is the data the case studies and error analysis use. Nothing
+  here changes a model or threshold.
+
+### D-065 - Marginal direction reported next to conditional direction (Phase 8)
+- **Why:** a feature whose model direction differs from its one-at-a-time direction is
+  usually correcting for correlated features and must not be read as a stand-alone effect.
+  This is the guard against over-interpreting coefficients and SHAP signs.
+
+### D-066 - Calendar proxies are not removed now (Phase 8)
+- **Why:** removing `approve_month`/holiday features changes the model after the test set was
+  opened; a clean v2 needs a new validation cycle. Recorded as the first follow-up and shown
+  openly in the case studies.

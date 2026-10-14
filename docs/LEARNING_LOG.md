@@ -231,3 +231,37 @@ captures (at 10% capacity and p = 30%: about 74 of a ceiling of 306).
 
 **Why a simulation and not a result?** We do not know how often an intervention actually
 works; p is an assumption. The CI shows sampling uncertainty over days, not uncertainty in p.
+
+---
+
+## Phase 8 - Explainability
+
+**What do Shapley values mean, intuitively?** Imagine the features joining the prediction one at
+a time in every possible order. A feature's Shapley value is its average extra push on the
+prediction across all those orders. The values add up exactly from the average prediction to
+this order's prediction.
+
+**What is their main limitation?** With correlated features the credit is split somewhat
+arbitrarily (route late rate vs customer-state late rate), so one feature's value can look small
+because its sibling took the credit. Also: SHAP explains the model, not the world.
+
+**How do you read an EBM shape plot?** Each panel is one feature's learned effect on the
+log-odds as the value changes. Zero is the average order. Rising = more of it, more risk; the
+band is bag-to-bag uncertainty. Because the model is a sum of such panels (plus a few pairs), the
+plots are the whole model, not a summary of it.
+
+**Why group features into reasons?** Three distance features would otherwise produce three
+near-identical bullets, and correlated siblings can carry opposite signs that confuse a reader.
+Summing inside a group gives one honest message.
+
+**Why avoid words like "tight" in reason codes?** A model's learned direction for a feature can
+differ from intuition. If the sentence says "elevated" next to a low number, users stop trusting
+all of it. Facts plus a sign are always true.
+
+**Linear model vs tree model: why do explanations disagree?** Correlated features share credit
+differently in a linear model; trees can use a feature only where it matters. Disagreement is a
+reminder not to read single coefficients, not proof one model is wrong.
+
+**What can explanations NOT tell you?** Causes. They describe how the model uses information
+available at approval time; unexplained delays (the false-negative case) are information the
+model never had.

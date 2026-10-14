@@ -12,9 +12,7 @@ from ontime.config import setup_logging
 
 log = logging.getLogger("ontime.pipeline")
 
-PENDING: dict[str, str] = {
-    "explain": "Phase 8",
-}
+PENDING: dict[str, str] = {}
 
 
 def stage_data() -> None:
@@ -76,6 +74,13 @@ def stage_evaluate(dry_run: bool = False) -> None:
     run_evaluation(dry_run=dry_run)
 
 
+def stage_explain() -> None:
+    """Global explanations, agreement report and reason codes for every test order."""
+    from ontime.explain.run import run_explain
+
+    run_explain()
+
+
 def stage_train() -> None:
     """Tune, fit, calibrate and evaluate all models on validation; save to models/."""
     from ontime.models.run import run_training
@@ -84,6 +89,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "explain": stage_explain,
     "evaluate": stage_evaluate,
     "train": stage_train,
     "baselines": stage_baselines,

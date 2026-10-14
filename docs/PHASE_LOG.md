@@ -425,3 +425,79 @@ surge-specific, but it uses val_calib's lesson, so val_calib would stop being fu
 was tested and not supported; reported as such.
 
 **Verification:** pytest 85 passed; ruff clean; `make evaluate` ~2 minutes.
+
+---
+
+## Phase 8 - Explainability (2026-10-14)
+
+**Goal:** global and per-order explanations in plain English, with an agreement check.
+
+**Acceptance (BUILD_PLAN):** template coverage test passes; reason codes read naturally (owner
+reviews 10); agreement report exists.
+
+**Built**
+- `explain/contributions.py` - per-order, per-feature log-odds contributions for LR
+  (coefficient x preprocessed value, mapped back to source features), EBM (term scores; an
+  interaction is split equally between its two features) and LightGBM (TreeSHAP). Each satisfies
+  `sum(contributions) + intercept == model log-odds`.
+- `explain/reason_codes.py` + `configs/reason_templates.yaml` - 16 reason groups, wording in one
+  reviewable file; top 3 "adds risk" and top 2 "reduces risk" above 0.05 log-odds.
+- `explain/ebm_explain.py` (importances, shape functions, interaction heatmap),
+  `explain/shap_explain.py` (beeswarm, bar, dependence, waterfall), `explain/agreement.py`
+  (rank and direction agreement, marginal direction), `explain/cases.py`, `explain/run.py`.
+- `make explain` (12 s). `notebooks/04_explainability.ipynb` (27 cells, 3 case studies).
+- Tests: `tests/test_explain.py` (12). Suite: 97 passing.
+- Outputs: `reports/test_reason_codes.parquet` (72,279 rows = 24,093 test orders x 3 models),
+  `reports/reason_code_samples.md` (10 for review), `reports/explain_agreement.md`,
+  `explain_summary.json`, `global_importance_{features,groups}.csv`, `ebm_term_importance.csv`,
+  `explain_direction_agreement.csv`, 6 `explain_*.png` + 3 case waterfalls.
+
+**Results (validation set for global analyses; test set for reason codes)**
+- Exactness: additive-identity max error LR 3.6e-15, LightGBM 7.1e-15, EBM 3.1e-15.
+- Every test order receives at least one risk factor from each of the three models (100%).
+- Rank agreement of global importance: LightGBM vs EBM Spearman 0.78 (top-10 overlap 80%);
+  LR vs LightGBM 0.41 (30%); LR vs EBM 0.40 (50%).
+- Top reason groups: LightGBM and EBM both: route history, seller record, distance. LR:
+  payment, same state, approval timing (a much flatter profile).
+- Direction: of 32 numeric features with a clear direction in at least two models, 26 agree and
+  6 conflict (geo_imputed, handling_window_days, days_to_next_holiday, freight_ratio,
+  total_weight_kg, seller_n_past); 4 differ from the one-feature-at-a-time direction
+  (approve_month, days_to_next_holiday, holidays_in_promise_window, freight_ratio).
+- EBM: main effects carry 72.3% of importance, 10 interactions 27.7%; strongest
+  `approve_month x days_to_next_holiday` (7.6% of total).
+
+**Problems found and fixed during the phase (kept for honesty)**
+1. First template draft used judgement words ("elevated", "tight", "weak"). The agreement table
+   showed `global_late_rate_30d` has direction "higher -> LESS risk" in LR and LightGBM, so a
+   positive contribution would print "Network-wide delays are elevated: 2% late" - a sentence
+   contradicting its own number. Wording rule changed to facts + sign-driven suffix (D-062).
+2. Displayed facts did not match drivers: the calendar sentence mentioned holidays in window
+   while `days_to_next_holiday` drove the score; the timing sentence omitted `approve_month`.
+   Both sentences now include the driving fields.
+3. NaN values printed as "nan" (format spec never raised); now render as "n/a" (tested).
+4. Marginal-direction threshold of 0.2 reported "no differences" because single features are
+   individually weak; lowered to 0.03 (nonzero at n = 20k).
+
+**Findings that matter**
+- Linear and tree models give the same order very different probabilities (case 1: LR 62%,
+  LightGBM 12%, EBM 14%): LR's top end is overconfident (consistent with the Phase 7 calibration
+  plot). Display risk bands and rank, not exact percentages.
+- Calendar proxies (`approve_month`, holiday features) are used by every model and show up in
+  reason codes ("approved on a Friday in August (reduces risk)"). They mostly encode which part
+  of the year the training data covered. Candidate for removal in a v2 (needs a fresh
+  validation cycle; not done now because test has been opened).
+- LR leans on groups tree models ignore (payment 0.48 vs 0.007; network delays 0.33 vs 0.035)
+  yet was the best out-of-time ranker. Hypothesis (unproven): broad use of many stable features
+  transfers better than heavy reliance on history features whose behaviour shifted.
+
+**Case studies (mechanical selection by primary-model score; test set)**
+- True positive: late (15.2 days vs 6.7 promised); all three models lead with route history.
+- False positive: on time (11.8 vs 18.1 promised) but LR 62%; LightGBM 11%, EBM 8%. Reasons were
+  real facts (long route, route history, thin seller record).
+- False negative: late (36.2 days vs 27.3) with all models below 3%: short same-state route,
+  established seller, low-risk route - nothing at approval time pointed to it.
+
+**Owner action requested:** read `reports/reason_code_samples.md` (10 orders) and tell me whether
+the sentences read naturally; wording lives in `configs/reason_templates.yaml`.
+
+**Verification:** pytest 97 passed; ruff clean; notebook 04 executes with no errors.

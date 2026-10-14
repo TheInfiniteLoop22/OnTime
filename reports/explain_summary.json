@@ -1,0 +1,89 @@
+{
+  "agreement": {
+    "rank_agreement": {
+      "spearman": {
+        "logreg vs lightgbm": 0.4105269404402018,
+        "logreg vs ebm": 0.40445708866761493,
+        "lightgbm vs ebm": 0.7768359921180025
+      },
+      "top_k_overlap": {
+        "logreg vs lightgbm": 0.3,
+        "logreg vs ebm": 0.5,
+        "lightgbm vs ebm": 0.8
+      },
+      "top_k": 10
+    },
+    "direction": {
+      "features_compared": 32,
+      "agree": 26,
+      "conflict": 6,
+      "conflicting_features": [
+        "geo_imputed",
+        "handling_window_days",
+        "days_to_next_holiday",
+        "freight_ratio",
+        "total_weight_kg",
+        "seller_n_past"
+      ],
+      "differs_from_marginal": [
+        "approve_month",
+        "days_to_next_holiday",
+        "holidays_in_promise_window",
+        "freight_ratio"
+      ]
+    },
+    "top10_by_model": {
+      "logreg": [
+        "payment_type",
+        "max_item_weight_kg",
+        "total_weight_kg",
+        "same_state",
+        "global_late_rate_30d",
+        "approve_month",
+        "customer_region",
+        "promised_days",
+        "seller_late_rate_90d_shrunk",
+        "seller_n_past"
+      ],
+      "lightgbm": [
+        "customer_state_late_rate_shrunk",
+        "promise_per_1000km",
+        "route_late_rate_shrunk",
+        "promised_days",
+        "seller_late_rate_90d_shrunk",
+        "approval_lag_hours",
+        "approve_month",
+        "days_to_next_holiday",
+        "seller_late_rate_shrunk",
+        "category_group"
+      ],
+      "ebm": [
+        "customer_state_late_rate_shrunk",
+        "route_late_rate_shrunk",
+        "days_to_next_holiday",
+        "customer_region",
+        "promise_per_1000km",
+        "approve_month",
+        "same_state",
+        "seller_late_rate_90d_shrunk",
+        "promised_days",
+        "seller_late_rate_shrunk"
+      ]
+    },
+    "ebm_top_interaction": "approve_month & days_to_next_holiday",
+    "ebm_interaction_share_of_importance": 0.2767097960593252
+  },
+  "reason_codes": {
+    "orders": 24093,
+    "models": [
+      "logreg",
+      "lightgbm",
+      "ebm"
+    ],
+    "share_with_at_least_one_risk_factor": {
+      "logreg": 1.0,
+      "lightgbm": 1.0,
+      "ebm": 1.0
+    }
+  }
+}
