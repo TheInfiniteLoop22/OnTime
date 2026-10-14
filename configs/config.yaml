@@ -84,6 +84,20 @@ features:
       dvds_blu_ray, music, cine_photo, musical_instruments]
     food_pets: [food, drinks, food_drink, pet_shop]
 
+monitoring:
+  psi_bins: 10
+  psi_watch: 0.10    # PSI 0.10-0.25 = moderate shift
+  psi_alert: 0.25    # PSI above this = major shift
+  min_month_orders: 500
+  trailing_months: 3   # 'sudden change' reference = the previous N months
+  # Features that are time-indexed or system STATE by construction. They move every month on
+  # purpose (the model uses them to adapt), so PSI on them is an expected, non-alerting signal;
+  # their level is tracked instead. Alerts are driven by order-intrinsic features + performance.
+  expected_drift_features: [approve_month, days_to_next_holiday, holidays_in_promise_window,
+    is_black_friday_window, seller_n_past, seller_days_since_first_order, global_late_rate_30d,
+    customer_state_late_rate_shrunk, route_late_rate_shrunk, seller_late_rate_shrunk,
+    seller_late_rate_90d_shrunk, seller_load_7d]
+
 policy:
   capacity_grid: [0.05, 0.10, 0.20]          # fraction of daily orders ops can act on
   intervention_success_grid: [0.1, 0.2, 0.3, 0.5]  # ASSUMED prob. an intervention prevents lateness

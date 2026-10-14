@@ -81,6 +81,13 @@ def stage_explain() -> None:
     run_explain()
 
 
+def stage_monitor() -> None:
+    """Drift tables: PSI by feature and month, label drift, performance by month."""
+    from ontime.monitoring.run import run_monitor
+
+    run_monitor()
+
+
 def stage_report() -> None:
     """Generate README.md and reports/model_card.md from the result files."""
     from ontime.reporting.render import build_reports
@@ -96,6 +103,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "monitor": stage_monitor,
     "report": stage_report,
     "explain": stage_explain,
     "evaluate": stage_evaluate,
