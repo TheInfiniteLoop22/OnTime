@@ -622,3 +622,82 @@ finalized LEARNING_LOG; CI running ruff + pytest on a small fixture dataset.
   decision: the dataset is CC BY-NC-SA). Instructions in the README.
 - Optional stretch phases S1 (quantile ETA), S2 (drift monitoring), S3 (FastAPI + Docker).
 - Code licence file (your choice).
+
+
+---
+
+## Phase 11 - Making it stronger: monitoring, retraining study, Stage 2, deployment (2026-10-14)
+
+**Why:** an honest review of Phase 7 listed the weaknesses (approval-time ranking decays; modest lift;
+no live link). This phase tests the obvious remedies in order of cost, keeps the negative results,
+and keeps the Phase 7 headline numbers untouched.
+
+**Order of work and outcome**
+1. **Drift monitor (stretch S2).** `src/ontime/monitoring`, `make monitor`, app page *Drift monitor*.
+   PSI of every feature per month vs the training period and vs the previous three months, plus
+   ranking quality by month. First version alerted EVERY month (11-15 features above 0.25, even in
+   February when ranking was at its best): useless. Cause: system-state features (late-rate
+   histories, seller tenure, calendar) are time-indexed by construction and take a narrow range
+   inside one month, so PSI explodes. Fix: alert only on order-intrinsic features; track state
+   features by level. Result: stable -> watch -> alert as promise length, handover window and
+   approval lag shifted (June-August), one month ahead of the first >0.05 ROC-AUC drop (July).
+   Caveat: 7 months, and the split was decided after seeing raw PSI always fires. Illustration, not
+   validation.
+2. **Rolling-origin retraining study** (`src/ontime/models/rolling.py`, `make rolling`). Monthly
+   retrain on outcomes known at month start (expanding window), with/without calendar proxies,
+   LR and LightGBM, against the static deployed model, Feb-Aug 2018. **Negative result:** retraining
+   did not help (pooled lift 2.34 vs 2.37 for static; difference -0.03, CI [-0.10, +0.04]); dropping
+   the proxies did not help (-0.04 [-0.10, +0.02] LR; -0.10 [-0.19, 0.00] LightGBM); LightGBM with
+   generic parameters was clearly worse (-0.55 [-0.70, -0.41]). My earlier recommendation to drop
+   `approve_month` and the holiday features is retracted. Labelled a development backtest: the months
+   had been seen.
+3. **Why the decay?** Exploratory, validation-period tooling plus descriptive tables on the test
+   months: in August every history signal is inverted (all-time customer-state rate has AUC 0.34);
+   late rate in Sao Paulo, historically the safest state (~3%), rose to 11.5% (+8.6 pp vs the previous
+   three months) and SP is nearly half of all orders. A sudden local shock that outcome-based history
+   cannot see in time (labels arrive ~10+ days later). 7- and 14-day history windows did not fix it.
+4. **Stage 2: re-score at carrier handover** (`src/ontime/stage2`, `make stage2`). Decision time
+   `t1 = max(handover, approval)`; adds own handover timing, seller late-handover rate, destination
+   backlog (share of orders handed over 8-28 days earlier still undelivered at the start of the
+   decision day). Pre-registered protocol: same splits, select LR vs LightGBM by validation PR-AUC
+   (LightGBM 0.403 vs LR 0.397), score test once next to the deployed stage-1 model on the same
+   orders. **Result (test, 94,913-order population, 24,093 test orders):** PR-AUC 0.395
+   [0.365, 0.422] vs 0.093; ROC-AUC 0.826 vs 0.701; lift at 10% capacity 4.6x vs 2.4x (same grouping);
+   paired PR-AUC difference +0.302 [+0.271, +0.330]. Month by month ROC-AUC 0.81, 0.80, 0.82, 0.85
+   (stage 1: 0.75, 0.78, 0.64, 0.57): the decay disappears. Simulated policy at 10% capacity and
+   30% success: ~154 late orders prevented (14% of late) vs ~79 at approval and ~35 for random.
+   Late orders have a median ~10 days left at handover (70% have 3+ days).
+5. **Deployment hardening.** `make scores` precomputes the app's test scores (cold start 4-5 s to
+   about 2 s for the heavy pages); `make bundle` builds a ~26 MB self-contained `deploy` branch (app,
+   src, artifacts, runtime-only `requirements.txt`) from a temporary repo, so `main` stays free of
+   data and models. Verified by installing ONLY requirements.txt in a fresh virtual environment and
+   rendering all six pages from the bundle.
+
+**Checks on whether Stage 2 is too good to be true (it improved ROC from 0.70 to 0.83)**
+- Leakage tests: future deliveries must not change the backlog; vectorized equals a naive loop on
+  random worlds (3 seeds); seller handover rate excludes the order itself; decision time never
+  precedes approval; same checks run end to end on the synthetic integration dataset in CI.
+- Ablation (validation, LR): +own handover timing +0.089 PR-AUC; +backlog +0.053; both +0.138;
+  seller handover history alone does not help (0.243 vs 0.259).
+- The backlog has median AUC 0.53 *within* a state-month: it signals when/where trouble is, not
+  which individual order is late, i.e. it is not encoding each order's own outcome.
+- Rationale predates the result: it was designed after the August diagnosis to react to a regional
+  shock earlier than delivered outcomes.
+
+**Caveats that stay attached to Stage 2**
+- The test months had been evaluated once for stage 1; stage 2 is a second, separately declared
+  model on the same months. It is not a first-look hold-out and needs fresh data for confirmation.
+- Ranking only: no calibration fitted; use rank/bands.
+- Acting at handover leaves fewer days than acting at approval; some interventions may be
+  infeasible by then (shown: median ~10 days left).
+- Test-set exposure so far: stage 1 (once), stage 2 chosen-model (once), the retraining study and the
+  monitor reused the months descriptively. Phase 7 numbers were not recomputed or altered.
+
+**Mistakes and course corrections in this phase**
+- The first monitor design alerted every month (above).
+- An early "ablation by feature subset" on the pipeline helper broke on a subset without
+  `approve_month` (a calendar integer one-hot encoded as a string); fixed by making the string
+  cast tolerate missing columns.
+- A patch script asserted against pre-formatting text and wrote nothing; re-done against the real file.
+
+**Tests:** 143 passing (monitoring 11, stage 2 9+1 integration, reporting, app 10). Ruff clean.

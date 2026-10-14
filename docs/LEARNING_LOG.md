@@ -355,3 +355,38 @@ or the licence concern of redistributing data.
 **What is a model card?** A one-page, standard disclosure: what the model is for and not for, the data,
 metrics by period and slice, calibration, limits and ethical considerations. It is the artefact a
 reviewer or a new teammate reads first.
+
+
+---
+
+## Phase 11 - Monitoring, negative results, and a second decision point
+
+**Why does PSI fail on some features, and what did you do?** PSI compares a feature's distribution to a
+reference. Features that are time-indexed or system state (rolling late rates, tenure, month) move
+every month by design and take a narrow range inside one month, so PSI explodes and the monitor cries
+wolf. Alert on order-intrinsic features, track state features by level, confirm with performance.
+
+**What is label delay and why does it matter for monitoring?** Outcomes arrive ~10+ days after the
+decision. Performance monitoring is therefore late; input-drift signals (no labels needed) are the
+early warning. Same reason outcome-based history cannot see a fresh local shock.
+
+**What did you try that did not work and why report it?** Monthly retraining and removing calendar
+proxies. Negative results rule out cheap fixes, show the cause is not model staleness, and stop others
+repeating them. Reporting them is also what makes the positive result credible.
+
+**How do you know a big improvement is not leakage?** Ask what information the feature uses and when it
+becomes known; test that changing the future leaves the feature unchanged; compare to a naive
+implementation; ablate; check that the new signal does what it was designed for (here: the backlog
+discriminates *when/where* but not *which order*, within-group AUC 0.53); and be suspicious
+of improvements bigger than your intuition.
+
+**Why a second model at a later decision time?** The information needed was not available at approval.
+A decision point should be chosen where the information is good enough and there is still time to act.
+Here handover is ~1-2 days after approval with ~10 days left for late orders.
+
+**What is a development backtest vs a hold-out?** A hold-out is data you have not looked at for any
+design decision. Once you have used it, it is a development set. Say so, disclose it, and ask for new
+data to confirm.
+
+**What does `make bundle` buy you?** A reproducible, small, data-bearing branch for hosting without
+polluting `main` with large or licensed files, and a deployment you can verify in a clean environment.

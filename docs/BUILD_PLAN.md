@@ -118,7 +118,7 @@ understand the project from the README alone.
 - **S1 Quantile ETA:** LightGBM quantile objective (α = 0.5, 0.9) for delivery_days; compare
   promise coverage and average promise length vs Olist's estimate ("could we promise shorter
   dates on safe routes and longer on risky ones?").
-- **S2 Drift monitoring:** PSI per feature by month + rolling PR-AUC chart, as an app page.
+- **S2 Drift monitoring (DONE - Phase 11):** PSI per feature by month + rolling PR-AUC chart, as an app page.
 - **S3 Serving:** FastAPI `/score` returning probability + reason codes; Dockerfile.
 
 ---
@@ -130,3 +130,8 @@ understand the project from the README alone.
 - Phase 6: explain gradient boosting, EBM vs GAM, early stopping, calibration.
 - Phase 7: explain PR-AUC, precision@k, lift, and why the threshold comes from capacity.
 - Phase 8: explain Shapley values intuitively and one limitation; explain an EBM shape plot.
+
+## Phase 11 (added): making it stronger
+Monitoring (S2), rolling retraining study, Stage 2 handover model, deployment bundle. Outcomes and
+caveats are in `docs/PHASE_LOG.md` (Phase 11) and `docs/DECISIONS_LOG.md` (D-079..D-086).
+S1 (quantile ETA) and S3 (FastAPI + Docker) remain open.

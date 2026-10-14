@@ -444,3 +444,48 @@ New entries are appended at the end of every phase. Numbers cited here come from
 
 ### D-078 - Notebook 03 helpers live in `src/ontime/reporting/walkthrough.py` (Phase 10)
 - **Why:** CLAUDE.md rule 6 (notebooks import and narrate); the same tables can be reused or tested.
+
+
+---
+
+### D-079 - Monitor order-intrinsic features by PSI; track system-state features by level (Phase 11)
+- **Alternatives:** PSI on all features against the training period; against a trailing reference.
+- **Why:** PSI on state features fired every month (alert fatigue). The model uses those features to
+  adapt, so their movement is expected. Alert on what the *orders* look like (promise, handover
+  window, approval lag, mix) and confirm with performance.
+- **Cost:** the split was decided after seeing the raw signal; thresholds (0.10/0.25, >=3 features) are
+  conventional, not tuned; 7 months is too short to validate.
+
+### D-080 - Test remedies cheaply and in order; report negatives (Phase 11)
+- Monthly retraining and dropping calendar proxies were tested before building anything heavy.
+  Both failed; the proxy-removal recommendation of D-036/D-066 is retracted. The study is labelled a
+  development backtest because the months had been seen.
+
+### D-081 - Stage 2 is a separate model with a later decision time, not a feature tweak (Phase 11)
+- **Alternatives:** more history windows at approval (tested exploratively: no gain); re-tuning.
+- **Why:** the failure was unobservable at approval. A later event (carrier handover) exposes new
+  information while still leaving days to act. This changes the product definition (two scores) and is
+  documented as such. Stage 1 results and the app's primary model are unchanged.
+
+### D-082 - Backlog events come from ALL orders; deliveries count only for earlier days (Phase 11)
+- **Why:** conditioning events on "was eventually delivered" would leak the future; counting a
+  same-day delivery would assume knowledge the system does not have at t1. Day-resolution prefix
+  sums make it exact and fast; tested against a brute-force loop.
+
+### D-083 - Stage-2 selection and test exposure are pre-declared and disclosed (Phase 11)
+- Selected by validation PR-AUC between LR and LightGBM; only the selected model is scored on
+  test, once, next to stage 1 on the same orders; paired bootstrap. The result carries a disclosure
+  everywhere it appears (README, model card, app, JSON).
+
+### D-084 - Stage 2 outputs a ranking only; no calibration (Phase 11)
+- **Why:** Phase 7 showed calibrators do not survive base-rate shifts; adding one here would add a
+  fitted object without evidence it helps. Bands/rank are the product.
+
+### D-085 - Deploy from a generated `deploy` branch; keep `main` data-free (Phase 11)
+- **Alternatives:** commit data/models to main; Git LFS; DVC.
+- **Why:** the dataset is CC BY-NC-SA and large; a throwaway branch built from a temp repo keeps `main`
+  clean and reproducible (`make bundle`). Verified in a fresh venv with only the runtime
+  requirements. The branch is force-pushed (its history is disposable by design).
+
+### D-086 - Precompute test scores to a parquet for the app (Phase 11)
+- **Why:** cold start. The app falls back to live scoring if the file is missing.
