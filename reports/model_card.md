@@ -54,6 +54,26 @@ Reporting"._
 - Operational: precision/recall/lift at daily capacity of 5%, 10% and 20% (see `reports/results.md`).
 - **Glass-box vs black-box:** EBM minus LightGBM = -0.004 PR-AUC, 95% CI [-0.009, +0.002] (no reliable difference)
 
+## 4b. Stage 2: re-scoring at carrier handover
+- **What it is:** a second model that re-scores each order when the seller hands it to the carrier,
+  adding the order's own handover timing, the seller's recent handover punctuality and a destination
+  backlog (earlier orders still in transit). Customer delivery date and reviews are never used.
+- **Selection:** LightGBM, chosen by validation PR-AUC (0.255 at approval vs
+  0.403 at handover on validation); scored on the test months once.
+- **Test result (same orders):** PR-AUC 0.395 [0.365, 0.422] vs 0.093 at approval; ROC-AUC
+  0.826 vs 0.701; lift at 10% capacity 4.6x [4.13, 5.05] vs 2.4x.
+- **Time to act:** handover happens a median 1.2 days after approval; late orders have
+  a median 10 days left before the promised date.
+- **Caveat:** the test months were already seen once for stage 1; stage 2 is a separate, pre-declared
+  model on the same months and needs fresh data for confirmation. Ranking only (no calibration).
+
+| Month | Late rate | ROC-AUC at approval | ROC-AUC at handover | Lift@10% at approval | Lift@10% at handover |
+|---|---|---|---|---|---|
+| 2018-05 | 6.5% | 0.75 | 0.81 | 2.93 | 3.81 |
+| 2018-06 | 1.2% | 0.78 | 0.80 | 3.78 | 5.26 |
+| 2018-07 | 3.2% | 0.64 | 0.82 | 2.82 | 4.79 |
+| 2018-08 | 7.5% | 0.57 | 0.85 | 1.29 | 4.95 |
+
 ## 5. Calibration
 | Model | Calibrator | Brier (deployed) | Brier (monthly recalibration) | ECE (deployed) |
 |---|---|---|---|---|
@@ -105,8 +125,35 @@ Full table: `reports/slices.csv`.
 - **Data limits.** Orders that were cancelled or never delivered are not in the training population.
 - **Privacy.** The dataset is anonymised; the app shows order and seller identifiers only.
 
+## 9b. Monitoring
+Drift is tracked per month (PSI for order-intrinsic features vs the previous three months,
+ranking quality, status). The monitor first reached *alert* in 2018-06; ranking quality first fell more than 0.05 below its starting level in 2018-07 (1 month(s) later). State features are tracked by level, not
+alerted. Seven months is too few to call this validated.
+
+| Month | Order-mix features in alert | ROC-AUC | Status |
+|---|---|---|---|
+| 2018-02 | 0 | 0.73 | stable |
+| 2018-03 | 2 | 0.73 | watch |
+| 2018-04 | 1 | 0.79 | watch |
+| 2018-05 | 1 | 0.75 | watch |
+| 2018-06 | 3 | 0.78 | alert |
+| 2018-07 | 4 | 0.64 | alert |
+| 2018-08 | 3 | 0.57 | alert |
+
+## 9c. What did not work
+Monthly retraining and dropping the calendar proxies were tested in a rolling-origin development
+backtest and did not improve out-of-time ranking:
+
+| Variant | Macro ROC-AUC | Pooled lift@10% | vs deployed static model (lift diff, 95% CI) |
+|---|---|---|---|
+| Deployed v1 (trained once, to Jan 2018) | 0.710 | 2.37 | (reference) |
+| Logistic regression, monthly retrain, all features | 0.703 | 2.34 | -0.03 [-0.10, +0.04] |
+| Logistic regression, monthly retrain, no calendar proxies | 0.690 | 2.30 | -0.07 [-0.14, +0.00] |
+| LightGBM, monthly retrain, all features | 0.639 | 1.82 | -0.55 [-0.70, -0.41] |
+| LightGBM, monthly retrain, no calendar proxies | 0.616 | 1.72 | -0.65 [-0.79, -0.49] |
+
 ## 10. Caveats and recommendations
-1. Re-validate before any use outside the 2016-2018 Olist data.
+1. Re-validate before any use outside the 2016-2018 Olist data; confirm stage 2 on new data.
 2. Monitor weekly: rolling PR-AUC, calibration, and feature drift; retrain on a schedule.
 3. Present risk **bands and rank** to users, not exact percentages.
 4. Measure the intervention success rate with a randomized pilot before relying on the policy

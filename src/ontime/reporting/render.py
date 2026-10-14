@@ -91,6 +91,133 @@ def _lib_versions() -> str:
     return ", ".join(out)
 
 
+def _k10(entry: dict) -> dict:
+    return next(t for t in entry["top_k"] if abs(t["k"] - 0.10) < 1e-9)
+
+
+def _stage2_values(res: dict) -> dict[str, str]:
+    """Placeholders for the stage-2 (carrier handover) model."""
+    s2 = _load("stage2_results.json")
+    t = s2["test"]
+    m1, m2 = t["stage1"]["metrics"], t["stage2"]["metrics"]
+    k1, k2 = _k10(t["stage1"]), _k10(t["stage2"])
+    mon = pd.DataFrame(t["monthly"]).sort_values("month")
+    first, last = mon.iloc[0], mon.iloc[-1]
+    win = t["action_window_for_late_orders"]
+    v = s2["validation_comparison"]
+    pol = pd.DataFrame(t["policy"])
+    pm = sorted(pol["p"].unique())[len(pol["p"].unique()) // 2]
+    sel = pol[(pol["k"].round(3) == 0.10) & (pol["p"] == pm)].set_index("strategy")
+    ab = ["| Feature set | PR-AUC (validation) | ROC-AUC (validation) |", "|---|---|---|"]
+    for name, a in s2["ablation_validation_logreg"].items():
+        ab.append(f"| {name} | {a['pr_auc']:.3f} | {a['roc_auc']:.3f} |")
+    mt = ["| Month | Late rate | ROC-AUC at approval | ROC-AUC at handover | Lift@10% at approval | Lift@10% at handover |",
+          "|---|---|---|---|---|---|"]  # fmt: skip
+    for r in mon.itertuples():
+        mt.append(
+            f"| {r.month} | {_pct(r.late_rate)} | {r.stage1_roc_auc:.2f} | {r.stage2_roc_auc:.2f} | "
+            f"{r.stage1_lift_at_10:.2f} | {r.stage2_lift_at_10:.2f} |"
+        )
+    d = t["pr_auc_diff_stage2_minus_stage1"]
+    ld = t["lift_at_10_diff_stage2_minus_stage1"]
+    return {
+        "s2_model": LABEL[s2["chosen_model"]],
+        "s2_population": f"{s2['population']['orders_total']:,}",
+        "s2_pr_auc": f"{m2['pr_auc']['value']:.3f}",
+        "s2_pr_ci": _ci(m2["pr_auc"]["ci95"]),
+        "s1_same_pr_auc": f"{m1['pr_auc']['value']:.3f}",
+        "s2_roc": f"{m2['roc_auc']['value']:.3f}",
+        "s1_same_roc": f"{m1['roc_auc']['value']:.3f}",
+        "s2_lift10": f"{k2['lift']:.1f}",
+        "s2_lift10_ci": _ci(k2["ci95"]["lift"], 2),
+        "s1_same_lift10": f"{k1['lift']:.1f}",
+        "s2_precision10": _pct(k2["precision"]),
+        "s2_recall10": _pct(k2["recall"]),
+        "s2_pr_diff": f"{d['diff']:+.3f}",
+        "s2_pr_diff_ci": f"[{d['ci95'][0]:+.3f}, {d['ci95'][1]:+.3f}]",
+        "s2_lift_diff": f"{ld['diff']:+.2f}",
+        "s2_lift_diff_ci": f"[{ld['ci95'][0]:+.2f}, {ld['ci95'][1]:+.2f}]",
+        "s2_first_month": first["month"],
+        "s2_last_month": last["month"],
+        "s2_roc_first": f"{first['stage2_roc_auc']:.2f}",
+        "s2_roc_last": f"{last['stage2_roc_auc']:.2f}",
+        "s1_roc_last": f"{last['stage1_roc_auc']:.2f}",
+        "s2_window_median_days": f"{win['median_days_left_at_handover']:.0f}",
+        "s2_window_share3": _pct(win["share_with_3plus_days_left"], 0),
+        "s2_handover_median_days": f"{win['median_days_to_handover']:.1f}",
+        "s2_val_pr_s1": f"{v['stage1_pr_auc']:.3f}",
+        "s2_val_pr_s2": f"{v['stage2_pr_auc']:.3f}",
+        "s2_within_auc": f"{s2['backlog_within_state_month']['median_auc']:.2f}",
+        "s2_ablation_table": "\n".join(ab),
+        "s2_monthly_table": "\n".join(mt),
+        "s2_policy_sentence": (
+            f"at 10% daily capacity and an assumed {pm:.0%} success rate: about "
+            f"{sel.loc['stage2', 'prevented_expected']:.0f} late orders prevented when acting at handover "
+            f"({_pct(sel.loc['stage2', 'prevented_share_of_late'], 0)} of all late) vs "
+            f"{sel.loc['stage1', 'prevented_expected']:.0f} when acting at approval and "
+            f"{sel.loc['random', 'prevented_expected']:.0f} for random picking; ceiling "
+            f"{sel.loc['oracle', 'prevented_expected']:.0f}"
+        ),
+    }
+
+
+def _rolling_values() -> dict[str, str]:
+    """Placeholders for the monthly-retraining / calendar-proxy ablation (a negative result)."""
+    r = _load("rolling_backtest.json")
+    sm = r["summary"]
+    rows = ["| Variant | Macro ROC-AUC | Pooled lift@10% | vs deployed static model (lift diff, 95% CI) |",
+            "|---|---|---|---|"]  # fmt: skip
+    for v in sm.values():
+        d = v.get("lift_diff_vs_static")
+        cmp_ = (
+            f"{d['diff']:+.2f} [{d['ci95'][0]:+.2f}, {d['ci95'][1]:+.2f}]" if d else "(reference)"
+        )
+        rows.append(
+            f"| {v['label']} | {v['macro_roc_auc']:.3f} | {v['pooled_lift_at_10']:.2f} | {cmp_} |"
+        )
+    a = r["proxy_ablation"]
+    helped = sm["retrain_logreg_full"]["lift_diff_vs_static"]
+    return {
+        "roll_table": "\n".join(rows),
+        "roll_months": f"{r['months'][0]} to {r['months'][-1]}",
+        "roll_lr_diff": f"{helped['diff']:+.2f}",
+        "roll_lr_ci": f"[{helped['ci95'][0]:+.2f}, {helped['ci95'][1]:+.2f}]",
+        "roll_proxy_lr": f"{a['logreg']['noproxy_minus_full_lift']:+.2f} "
+        f"[{a['logreg']['ci95'][0]:+.2f}, {a['logreg']['ci95'][1]:+.2f}]",
+        "roll_proxy_lgbm": f"{a['lgbm']['noproxy_minus_full_lift']:+.2f} "
+        f"[{a['lgbm']['ci95'][0]:+.2f}, {a['lgbm']['ci95'][1]:+.2f}]",
+        "roll_static_lift": f"{sm['static_v1']['pooled_lift_at_10']:.2f}",
+        "roll_retrain_lift": f"{sm['retrain_logreg_full']['pooled_lift_at_10']:.2f}",
+    }
+
+
+def _drift_values() -> dict[str, str]:
+    """Placeholders for the drift monitor."""
+    cfg = load_config()
+    rep = project_path(cfg["paths"]["reports_dir"])
+    st = pd.read_csv(rep / "drift_status.csv", parse_dates=["month"])
+    summ = _load("drift_summary.json")
+    first_alert = st.loc[st["status"] == "alert", "month"].min()
+    perf_drop = st.loc[st["roc_vs_first"] <= -0.05, "month"].min()
+    tbl = ["| Month | Order-mix features in alert | ROC-AUC | Status |", "|---|---|---|---|"]
+    for r in st.itertuples():
+        tbl.append(f"| {r.month:%Y-%m} | {int(r.trail_alert)} | {r.roc_auc:.2f} | {r.status} |")
+    lead = ""
+    if pd.notna(first_alert) and pd.notna(perf_drop):
+        gap = (perf_drop.year - first_alert.year) * 12 + perf_drop.month - first_alert.month
+        lead = (
+            f"The monitor first reached *alert* in {first_alert:%Y-%m}; ranking quality first fell "
+            f"more than 0.05 below its starting level in {perf_drop:%Y-%m} "
+            f"({gap} month(s) later)."
+        )
+    return {
+        "drift_table": "\n".join(tbl),
+        "drift_lead_sentence": lead,
+        "drift_n_months": str(len(st)),
+        "drift_state_features": ", ".join(f"`{f}`" for f in summ["expected_drift_features"]),
+    }
+
+
 def collect_values() -> dict[str, str]:
     """Every placeholder used by the templates, computed from artifacts."""
     cfg = load_config()
@@ -193,7 +320,9 @@ def collect_values() -> dict[str, str]:
         prim,
     )
 
+    extra = {**_stage2_values(res), **_rolling_values(), **_drift_values()}
     return {
+        **extra,
         "test_orders": f"{pop['orders']:,}",
         "test_late": f"{pop['late_orders']:,}",
         "test_late_rate": _pct(pop["late_rate"]),

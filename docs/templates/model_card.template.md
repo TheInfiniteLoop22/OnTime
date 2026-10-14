@@ -47,6 +47,21 @@ Reporting"._
 - Operational: precision/recall/lift at daily capacity of 5%, 10% and 20% (see `reports/results.md`).
 - **Glass-box vs black-box:** {{gap_sentence}}
 
+## 4b. Stage 2: re-scoring at carrier handover
+- **What it is:** a second model that re-scores each order when the seller hands it to the carrier,
+  adding the order's own handover timing, the seller's recent handover punctuality and a destination
+  backlog (earlier orders still in transit). Customer delivery date and reviews are never used.
+- **Selection:** {{s2_model}}, chosen by validation PR-AUC ({{s2_val_pr_s1}} at approval vs
+  {{s2_val_pr_s2}} at handover on validation); scored on the test months once.
+- **Test result (same orders):** PR-AUC {{s2_pr_auc}} {{s2_pr_ci}} vs {{s1_same_pr_auc}} at approval; ROC-AUC
+  {{s2_roc}} vs {{s1_same_roc}}; lift at 10% capacity {{s2_lift10}}x {{s2_lift10_ci}} vs {{s1_same_lift10}}x.
+- **Time to act:** handover happens a median {{s2_handover_median_days}} days after approval; late orders have
+  a median {{s2_window_median_days}} days left before the promised date.
+- **Caveat:** the test months were already seen once for stage 1; stage 2 is a separate, pre-declared
+  model on the same months and needs fresh data for confirmation. Ranking only (no calibration).
+
+{{s2_monthly_table}}
+
 ## 5. Calibration
 {{calibration_text}}
 
@@ -73,8 +88,21 @@ Reporting"._
 - **Data limits.** Orders that were cancelled or never delivered are not in the training population.
 - **Privacy.** The dataset is anonymised; the app shows order and seller identifiers only.
 
+## 9b. Monitoring
+Drift is tracked per month (PSI for order-intrinsic features vs the previous three months,
+ranking quality, status). {{drift_lead_sentence}} State features are tracked by level, not
+alerted. Seven months is too few to call this validated.
+
+{{drift_table}}
+
+## 9c. What did not work
+Monthly retraining and dropping the calendar proxies were tested in a rolling-origin development
+backtest and did not improve out-of-time ranking:
+
+{{roll_table}}
+
 ## 10. Caveats and recommendations
-1. Re-validate before any use outside the 2016-2018 Olist data.
+1. Re-validate before any use outside the 2016-2018 Olist data; confirm stage 2 on new data.
 2. Monitor weekly: rolling PR-AUC, calibration, and feature drift; retrain on a schedule.
 3. Present risk **bands and rank** to users, not exact percentages.
 4. Measure the intervention success rate with a randomized pilot before relying on the policy

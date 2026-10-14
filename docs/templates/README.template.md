@@ -37,6 +37,7 @@ promised date, which is exactly what a prediction at approval time enables.
 | Beats a hand-written rule? | {{rule_verdict}} |
 | Glass-box vs black-box | {{gap_sentence}} |
 | Simulated benefit | {{policy_sentence}} |
+| **Stage 2: re-score at carrier handover** | PR-AUC **{{s2_pr_auc}}** {{s2_pr_ci}} on the same orders ({{s1_same_pr_auc}} at approval), ROC-AUC {{s2_roc}}, lift **{{s2_lift10}}x** at 10% capacity; late orders have a median {{s2_window_median_days}} days left to act |
 
 {{results_table}}
 
@@ -55,7 +56,10 @@ flowchart LR
     F --> G[Tune on validation,<br/>calibrate later in time]
     G --> H[Evaluate on test once]
     H --> I[Reason codes<br/>SHAP, EBM, coefficients]
+    H --> S[Stage 2: re-score at<br/>carrier handover]
     I --> J[Streamlit app<br/>+ policy simulator]
+    S --> J
+    J --> M[Drift monitor]
     C --> K[Impact analysis<br/>lateness to review score]
 ```
 
@@ -69,6 +73,84 @@ flowchart LR
   that order; the test split is locked behind an explicit `final_evaluation=True`.
 - **No invented numbers.** Results, this README and the model card are generated from run outputs.
 - **Honest reporting.** The negative results are in the write-up: see *Limitations*.
+
+## Stage 2: re-score the order when the seller hands it to the carrier
+
+At approval, almost nothing about a fresh local problem (a carrier strike, a storm) can be seen:
+outcome history only updates after parcels are *delivered*. But a few days later the seller hands the
+parcel to the carrier, which is observable long before delivery. Stage 2 re-scores each order at
+that moment with the approval-time features **plus**:
+
+- the order's own handover timing (days to handover, handover versus the seller's shipping limit,
+  promise days left),
+- the seller's recent handover punctuality,
+- a **destination backlog**: of earlier orders to the same state handed over 8-28 days ago, the share
+  *still undelivered today*, which rises as a regional problem builds, days before outcomes arrive.
+
+Same leakage discipline: the customer delivery date and reviews are never used; the backlog counts a
+delivery only if it happened on a day before the decision day; events come from all orders, not only
+ones that were eventually delivered. Tests include a brute-force equality check and a "future
+deliveries must not change the feature" test.
+
+| Test period | Stage 1 (at approval) | Stage 2 (at handover) |
+|---|---|---|
+| PR-AUC [95% CI] | {{s1_same_pr_auc}} | **{{s2_pr_auc}}** {{s2_pr_ci}} |
+| ROC-AUC | {{s1_same_roc}} | {{s2_roc}} |
+| Lift at 10% daily capacity | {{s1_same_lift10}}x | **{{s2_lift10}}x** {{s2_lift10_ci}} |
+| Paired PR-AUC difference | | {{s2_pr_diff}} {{s2_pr_diff_ci}} |
+| Paired lift@10% difference | | {{s2_lift_diff}} {{s2_lift_diff_ci}} |
+
+Both columns are scored on the same orders and grouped by the *decision day* (handover day), so stage 1's lift here ({{s1_same_lift10}}x) differs slightly from the headline table above, which groups by approval day. The population is the {{s2_population}} orders with a valid handover timestamp.
+
+{{s2_monthly_table}}
+
+The approval-time model decays by {{s2_last_month}} (ROC-AUC {{s1_roc_last}}); the handover-time model
+holds ({{s2_roc_first}} to {{s2_roc_last}}). What each block adds (validation period, logistic
+regression):
+
+{{s2_ablation_table}}
+
+- The backlog says *when and where* trouble is, not which order: its median AUC inside a single
+  state-month is only {{s2_within_auc}}, so it is not encoding an order's own outcome.
+- Handover usually happens {{s2_handover_median_days}} days after approval, and {{s2_window_share3}} of
+  late orders still had 3 or more days before the promised date when it happened, so there is time to act.
+- Simulated policy: {{s2_policy_sentence}}.
+- **Honest status.** The test months had already been used once to evaluate stage 1. Stage 2 was
+  declared separately, selected on validation ({{s2_model}} by validation PR-AUC), scored once, and
+  is reported next to stage 1 on the same orders, but it is *not* a first-look hold-out. It outputs
+  a ranking only (no calibration was fitted at this stage).
+
+## Things I tried that did not work
+
+Retraining monthly and dropping the calendar features were the two obvious fixes for the decay of the
+approval-time model. Both were tested in a rolling-origin backtest ({{roll_months}}; a development
+backtest, not a clean hold-out):
+
+{{roll_table}}
+
+- Retraining logistic regression every month on all outcomes known by then did **not** help
+  (pooled lift {{roll_retrain_lift}} vs {{roll_static_lift}} for the static model; difference
+  {{roll_lr_diff}} {{roll_lr_ci}}).
+- Dropping the calendar proxies did not help either (lift difference {{roll_proxy_lr}} for logistic
+  regression, {{roll_proxy_lgbm}} for LightGBM). My earlier suggestion to remove them is **retracted**.
+- Short-window history (7 and 14 days) was also checked on validation-period data and did not carry
+  more signal than the existing features in the months where the model failed.
+
+The decay was not staleness: it was a sudden local shock that outcome-based history cannot see in time.
+That is what motivated Stage 2.
+
+## Monitoring
+
+`make monitor` computes, per month, input drift (PSI) for order-intrinsic features against the previous
+three months, ranking quality of the deployed model, and a status. System-state features
+({{drift_state_features}}) move every month by design and are tracked by level, not alerted: using PSI
+on them fired every single month, which made the first version of this monitor useless.
+
+{{drift_table}}
+
+{{drift_lead_sentence}} With only {{drift_n_months}} monitored months and a rule shaped after seeing that
+raw PSI always fires, this is a worked design with an encouraging pattern, not a validated early-warning
+system.
 
 ## What the model sees, and why
 
@@ -93,6 +175,7 @@ make app        # streamlit run app/Home.py   (needs the pipeline artifacts)
 | ![Overview](docs/assets/app_overview.png) | ![Order risk explorer](docs/assets/app_risk_explorer.png) |
 | ![What-if](docs/assets/app_what_if.png) | ![Ops queue and policy simulator](docs/assets/app_ops_queue.png) |
 | ![Seller scorecard](docs/assets/app_seller_scorecard.png) | ![Model insights](docs/assets/app_model_insights.png) |
+| ![Stage 2](docs/assets/app_stage2.png) | ![Drift monitor](docs/assets/app_drift_monitor.png) |
 
 ## Run it yourself
 
@@ -110,6 +193,12 @@ make app                           # open the Streamlit app
 make test && make lint             # pytest (incl. a synthetic mini-Olist pipeline run) and ruff
 ```
 
+Individual stages: `make stage2` (handover model), `make monitor` (drift tables), `make rolling` (retraining study), `make scores` (precompute app scores for a fast start).
+
+### Deploy the app
+
+`main` deliberately contains no data or models. `make bundle` builds a ~25 MB self-contained `deploy` branch (app, source, the generated artifacts the app reads, a runtime-only `requirements.txt`) without touching `main`. On [share.streamlit.io](https://share.streamlit.io): New app -> this repository -> branch `deploy` -> main file `app/Home.py` -> Python 3.11. The bundle holds derived, anonymised order-level data from a CC BY-NC-SA dataset: keep it non-commercial and attributed.
+
 The test suite includes an integration test that generates a tiny synthetic Olist-shaped dataset and
 runs the real stages on it, so CI never needs the Kaggle download.
 
@@ -123,6 +212,9 @@ runs the real stages on it, so CI never needs the Kaggle download.
 | `src/ontime/evaluation` | metrics with bootstrap CIs, slices, policy simulation, plots, results report |
 | `src/ontime/explain` | EBM / SHAP / coefficient explanations, agreement, reason codes |
 | `src/ontime/serving` | scoring + what-if service used by the app |
+| `src/ontime/stage2` | handover-time features (backlog, handover timing) and the stage-2 model |
+| `src/ontime/monitoring` | PSI drift and performance-by-month monitor |
+| `src/ontime/deploy` | deploy-branch bundle builder |
 | `app/` | Streamlit app (`Home.py`, `views/`, `ontime_ui/`) |
 | `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability |
 | `reports/` | generated results, model card, figures (the data and models are git-ignored) |
@@ -133,8 +225,9 @@ runs the real stages on it, so CI never needs the Kaggle download.
 - **Probabilities are relative scores.** The late rate moved from {{train_late_rate}} (training) to
   {{test_late_rate}} (test) and month to month; calibrated percentages are overconfident for the
   riskiest orders. Use rank and risk bands. Monthly re-calibration did not fix this.
-- **Ranking decays after training.** Primary-model ROC-AUC was {{roc_first}} in {{month_first}} and
-  {{roc_last}} in {{month_last}}. Retraining and drift monitoring are required.
+- **The approval-time ranking decays.** Primary-model ROC-AUC was {{roc_first}} in {{month_first}} and
+  {{roc_last}} in {{month_last}}; monthly retraining did not fix it. Stage 2 (re-scoring at handover) holds
+  up, but it is a second look at the same months and needs fresh data to be confirmed.
 - **Modest, not magic.** Most late orders are not predictable from approval-time information (a
   carrier incident, a stock-out). The value is a better *queue*, not certainty.
 - **Simulation, not measurement.** The policy benefit assumes an intervention success rate; the
@@ -142,17 +235,18 @@ runs the real stages on it, so CI never needs the Kaggle download.
 - **Associations, not causes.** Explanations describe the model; the review-score gap is adjusted
   but observational.
 - **Calendar proxies.** `approve_month` and the holiday features mostly encode the part of the year
-  the training data covered (flagged for removal in a v2).
+  the training data covered; removing them did not improve out-of-time ranking in the retraining study.
 - **One marketplace, 2016-2018.** Nothing here is validated on other platforms or periods.
 
 ## Future work
 
-1. Retrain with expanding-window time-series CV so hyperparameters see several regimes; drop the
-   calendar proxies; re-validate.
-2. Drift monitoring page (PSI by feature, rolling PR-AUC) and scheduled retraining.
+1. Confirm Stage 2 on genuinely new data (the same months were seen twice); calibrate it and add its
+   reason codes to the app.
+2. A randomized pilot to measure the intervention success rate the policy simulator assumes.
 3. Quantile ETA model: could promises be shorter on safe routes and longer on risky ones?
 4. FastAPI `/score` endpoint with reason codes (the scoring service already exists in `src/`).
-5. A pilot with a randomized intervention to measure the success rate the simulator assumes.
+5. Streamlit Community Cloud deployment from the `deploy` branch (see below), and scheduled retraining
+   driven by the drift monitor.
 
 ## Data and licence
 

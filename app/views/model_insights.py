@@ -209,6 +209,7 @@ with tabs[1]:
             y=0.5, line_dash="dash", line_color=theme.MUTED, annotation_text="random = 0.5"
         )
         fig.update_yaxes(title_text="ROC-AUC by month", range=[0.4, 0.9])
+        fig.update_xaxes(type="category")
         st.plotly_chart(theme.style_fig(fig, 340), width="stretch")
         c.caption(
             "Look at the last months: the approval-time model decays while the handover-time model "
@@ -344,6 +345,7 @@ with tabs[3]:
         )
     fig.add_hline(y=0.5, line_dash="dash", line_color=theme.MUTED, annotation_text="random = 0.5")
     fig.update_yaxes(title_text="ROC-AUC by month", range=[0.4, 0.85])
+    fig.update_xaxes(type="category")
     st.plotly_chart(theme.style_fig(fig, 360), width="stretch")
     c.caption(
         "Look for the slide toward the dashed line in the later months: ranking skill decays as "
