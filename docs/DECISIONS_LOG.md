@@ -116,3 +116,56 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-019 - Haversine, not road distance (Phase 2)
 - **Why:** only zip-prefix centroids are known; straight-line distance is a standard and cheap
   proxy and correlates with road distance at national scale.
+
+---
+
+### D-020 - Keep the latest review per order (Phase 3)
+- **Alternatives:** first review; average of reviews; drop orders with several reviews.
+- **Why:** the last answer is the customer's settled opinion; dropping would discard data
+  (~0.5% of orders). Deterministic tie-break by creation date then review_id.
+
+### D-021 - Mann-Whitney + stratified bootstrap instead of a t-test (Phase 3)
+- **Why:** scores are ordinal and skewed (mass at 5); rank test avoids normality assumptions and
+  gives an interpretable "probability on-time is rated higher". Bootstrap CIs need no
+  distributional assumption. Resampling is stratified by group so group sizes stay fixed.
+- **Trade-off:** bootstrap treats orders as independent; seller clustering is handled in the OLS.
+
+### D-022 - Final split dates: keep the proposal (Phase 3)
+- **Decision:** train <= 2018-01-31, validation 2018-02-01..04-30, test 2018-05-01..cutoff.
+- **Alternatives considered (with real counts):** validation through May (test late orders drop
+  from 1,096 to 642); train through February (test again 642 late orders).
+- **Why:** the test set keeps > 1,000 late orders so PR-AUC bootstrap intervals are usable.
+- **Known cost:** late rate 5.6% / 12.6% / 4.5% across splits = distribution shift; calibration
+  on validation will be biased upward for test. We report it, not hide it.
+
+### D-023 - Controls and seller-clustered standard errors in OLS (Phase 3)
+- **Controls:** log price, log freight, items, log distance, same-state, category group (top 12 +
+  other), customer state, approval month - all known at order time and plausible confounders.
+- **Why cluster by seller:** orders of one seller are correlated; unclustered SEs are too narrow.
+- **Not controlled:** seller quality (handled by D-024) and anything unobserved.
+
+### D-024 - Seller fixed effects as the main robustness check (Phase 3)
+- **Why:** the strongest threat to the estimate is "slow sellers are also worse sellers".
+  Within-seller demeaning compares a seller with itself. Result was almost unchanged
+  (-1.98 vs -1.97), which supports lateness itself carrying the penalty.
+- **Limit:** removes only constant seller traits, not time-varying problems.
+
+### D-025 - Ordered logit on a 40,000-order seeded subsample, compact controls (Phase 3)
+- **Why:** it is a robustness check on the ordinal nature of the score, not the headline. Many
+  dummies make the optimizer slow with no change to the conclusion; the sample size is reported.
+
+### D-026 - Report the review-timing split and quote the conservative number (Phase 3)
+- **Finding:** 70.3% of late orders were answered before delivery (mean 1.65 stars).
+- **Decision:** the README headline will quote both the full adjusted gap (~2.0 stars) and the
+  after-delivery gap (~0.55), and interpret the difference as reaction to a broken promise.
+- **Why:** quoting only the large number would overstate what a late *delivery experience*
+  costs. The split also changes the product story: act before the promised date.
+
+### D-027 - Notebooks: computed inferences, claims verified against output (Phase 3)
+- **Why:** the owner explained that notebooks will be read by other people. Hand-typed numbers in
+  prose go stale and violate rule 5. Inference cells are f-strings over computed values, and every
+  qualitative claim was checked against executed output; wrong ones were rewritten.
+
+### D-028 - Ruff per-file ignores for notebooks and analysis imports (Phase 3)
+- **Why:** prose lines in notebooks exceed 100 chars by design, and modules that set the
+  matplotlib backend must import pyplot afterwards (E402). Scoped ignores keep real code strict.

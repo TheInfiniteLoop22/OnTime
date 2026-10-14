@@ -120,3 +120,61 @@ haversine, primary-seller selection and target definition on tiny fixtures.
 
 **Verification:** pytest 19 passed; ruff check + format clean; `make build` (equivalent run)
 produces the parquet and report section.
+
+---
+
+## Phase 3 - EDA + business impact (2026-10-14)
+
+**Goal:** understand the target before modelling, quantify why lateness matters, and finalize
+split dates. Notebooks must read as a clean explanatory flow (question -> evidence -> inference).
+
+**Acceptance (BUILD_PLAN):** notebooks run top-to-bottom via `nbconvert --execute`; impact numbers
+are in `impact.json` with CIs; wording says "adjusted association", not "causal effect".
+
+**Built**
+- `src/ontime/analysis/eda.py` - derived analysis columns, Wilson-CI rate tables, 9 report figures.
+- `src/ontime/analysis/impact.py` - review de-duplication, descriptive stats, Mann-Whitney,
+  bootstrap CIs, clustered OLS, seller fixed effects, ordered logit, dose-response, review-timing
+  analysis; `run_impact()` writes `reports/impact.json`.
+- `notebooks/01_eda.ipynb` (25 cells, 8 questions) and `notebooks/02_impact_analysis.ipynb`
+  (23 cells). Every inference cell is computed from data (no hand-typed numbers).
+- `make impact`, `make notebooks`; `tests/test_impact.py` (8 tests; suite is now 27 passing).
+- Figures in `reports/figures/`: eda_* (9) and impact_* (2).
+- Config: split dates finalized (comment updated).
+
+**Key results (from `reports/impact.json` and the notebooks)**
+- Analysis sample: 94,296 orders with a review; 6,352 late (6.7%).
+- Raw gap: on-time 4.29 stars vs late 2.26 (difference -2.02, bootstrap 95% CI [-2.06, -1.98]);
+  1-2 star reviews 62.6% of late vs 9.3% of on-time orders.
+- Adjusted (controls, seller-clustered SEs): -1.97 stars, CI [-2.02, -1.92].
+- Within-seller (fixed effects): -1.98, CI [-2.03, -1.93] (84,243 orders, 1,199 sellers).
+- Ordered logit odds ratio for late: 0.068, CI [0.063, 0.074] (n = 40,000 subsample).
+- Dose-response: 4.32 stars (>=8 days early) -> 3.28 (1-3 days late) -> 1.67 (8-14 days late),
+  flattening afterwards.
+- **Review timing finding:** 70.3% of late orders were reviewed before the parcel arrived (mean
+  1.65 stars). For reviews answered after delivery the adjusted penalty is only -0.55 stars,
+  CI [-0.61, -0.49]. The survey is sent a median 2 days after the PROMISED date for late orders.
+
+**EDA findings (see notebook 01)**
+- Late rate 6.9% (imbalanced; always-on-time is 93.1% accurate and useless).
+- Monthly late rate swings from 1.2% (Jun 2018) to 19.2% (Mar 2018); CI half-width <= 1.0 pp.
+- Median promise 23 days vs median actual 10 days; 74.4% of orders arrive >= 7 days early.
+- State spreads similar on both ends (customer 18.5 pp, seller 16.6 pp); distance 4.5% (<100 km)
+  to 11.9% (1500-2500 km); same-state 4.5% vs 8.1% inter-state.
+- Weekday spread only 1.2 pp; Black Friday window 17.1% vs 9.0% rest of month.
+- Splits: train 50,603 orders / 2,852 late (5.6%); validation 20,241 / 2,556 (12.6%);
+  test 24,093 / 1,096 (4.5%).
+
+**Mistakes caught and corrected (kept here for honesty)**
+1. First sensitivity check used `review_creation_date`, which is when the SURVEY was sent, not when
+   the customer answered. Switched to `review_answer_timestamp` and added evidence on survey timing.
+2. Several first-draft inferences in notebook 01 were unsupported by the data (e.g. "customer-side
+   spread is wider than seller-side", "routes are worse than distance alone explains"); all were
+   rewritten after executing and checking the outputs.
+
+**Open items for later phases**
+- Validation (12.6% late) vs test (4.5%) shift: expect over-prediction after calibration (Phase 6/7).
+- Reviews answered before delivery imply interventions must happen before the promised date (Phase 7/9 policy framing).
+- Seller fixed effects remove only time-constant seller quality; time-varying problems remain a threat.
+
+**Verification:** pytest 27 passed; ruff check + format clean; both notebooks executed with no errors.

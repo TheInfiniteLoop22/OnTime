@@ -56,3 +56,10 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks hold narrative prose and imports-after-setup by design.
+"notebooks/*.ipynb" = ["E501", "E402", "E702", "E731", "F401", "I001"]
+"src/ontime/analysis/*.py" = ["E402"]
+"src/ontime/data/build_orders.py" = ["E402"]
+

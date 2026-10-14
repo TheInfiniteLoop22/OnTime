@@ -1,4 +1,4 @@
-.PHONY: setup data build features train evaluate explain impact app test lint format all
+.PHONY: setup data build features train evaluate explain impact notebooks app test lint format all
 
 PY = uv run python
 
@@ -26,6 +26,10 @@ explain:
 
 impact:
 	$(PY) -m ontime.pipeline impact
+
+notebooks:
+	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/01_eda.ipynb
+	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/02_impact_analysis.ipynb
 
 app:
 	uv run streamlit run app/Home.py

@@ -28,7 +28,8 @@ raw_files:
   reviews: olist_order_reviews_dataset.csv
   category_translation: product_category_name_translation.csv
 
-# Time-based splits on order_approved_at. PROVISIONAL (Phase 3 finalizes).
+# Time-based splits on order_approved_at. FINALIZED in Phase 3 (see docs/DECISIONS_LOG.md D-022):
+# keeps >1,000 late orders in test for stable PR-AUC intervals.
 splits:
   train_end: "2018-01-31"
   val_start: "2018-02-01"

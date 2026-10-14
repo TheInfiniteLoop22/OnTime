@@ -55,3 +55,38 @@ that exclusions are tiny and deliberate (cancelled orders have no outcome to pre
 
 **Why median centroid per zip?** A zip prefix has many GPS points; a few are wrong. The median
 ignores outliers, the mean does not.
+
+---
+
+## Phase 3 - EDA and impact analysis
+
+**Why PR-AUC, not accuracy?** Only ~7% of orders are late, so "always on time" scores ~93%
+accuracy and finds nothing. PR-AUC (area under precision vs recall) only rewards finding the
+rare class and is not inflated by the huge on-time majority.
+
+**Mann-Whitney vs t-test?** A t-test compares means and assumes roughly normal data; scores are
+1-5 and piled at 5. Mann-Whitney compares ranks: "how often does a random on-time order outrank a
+random late one?" Use it for ordinal or skewed outcomes.
+
+**What is a bootstrap CI?** Resample the data with replacement many times, recompute the statistic
+each time, and take the 2.5th/97.5th percentiles. It shows how much the answer would wobble with a
+different sample, with no formula or normality assumption.
+
+**Why do controls change (or not change) an estimate?** If a third factor drives both lateness and
+low scores (confounder), the raw gap mixes both. Controlling for it removes that part. Here the
+estimate barely moved, so the measured confounders explain little.
+
+**What does a seller fixed effect do?** It compares each seller only with itself, so anything
+constant about the seller (quality, product type) cancels. If the effect survives, it is not just
+"bad sellers are late".
+
+**Why not say "causal"?** No randomization: unobserved factors can still link lateness and
+reviews, and only reviewers are observed. We say "adjusted association".
+
+**The surprise finding:** 7 in 10 late orders were reviewed before the parcel arrived. The
+penalty is mostly the reaction to a broken promise, so interventions must happen before the
+promised date.
+
+**Why a time-based split even before modelling?** The late rate moves from ~1% to ~19% across
+months; a random split would put neighbours from the same bad week in train and test and inflate
+every metric.

@@ -17,7 +17,6 @@ PENDING: dict[str, str] = {
     "train": "Phase 6",
     "evaluate": "Phase 7",
     "explain": "Phase 8",
-    "impact": "Phase 3",
 }
 
 
@@ -52,7 +51,14 @@ def stage_build() -> None:
     build()
 
 
-STAGES = {"data": stage_data, "build": stage_build}
+def stage_impact() -> None:
+    """Run the review-score impact analysis; writes reports/impact.json and figures."""
+    from ontime.analysis.impact import run_impact
+
+    run_impact()
+
+
+STAGES = {"data": stage_data, "build": stage_build, "impact": stage_impact}
 
 
 def main(argv: list[str] | None = None) -> int:
