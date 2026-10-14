@@ -58,6 +58,23 @@ def requirements_text() -> str:
     return "\n".join(lines) + "\n"
 
 
+API_PACKAGES = [
+    "pandas", "numpy", "scipy", "pyarrow", "scikit-learn", "lightgbm", "interpret", "shap",
+    "joblib", "PyYAML", "holidays", "fastapi", "uvicorn", "pydantic",
+]  # fmt: skip
+
+
+def api_requirements_text() -> str:
+    """Pinned runtime requirements for the API image (no Streamlit / plotting stack)."""
+    lines = []
+    for name in API_PACKAGES:
+        try:
+            lines.append(f"{name}=={metadata.version(name)}")
+        except metadata.PackageNotFoundError:
+            lines.append(name)
+    return "\n".join(lines) + "\n"
+
+
 def collect_files() -> tuple[list[Path], list[str]]:
     present = [PROJECT_ROOT / f for f in ARTIFACT_FILES if (PROJECT_ROOT / f).exists()]
     missing = [f for f in ARTIFACT_FILES if not (PROJECT_ROOT / f).exists()]

@@ -1,0 +1,14 @@
+pandas==3.0.6
+numpy==2.4.6
+scipy==1.17.1
+pyarrow==25.0.1
+scikit-learn==1.9.1
+lightgbm==4.7.0
+interpret==0.7.8
+shap==0.51.0
+joblib==1.6.0
+PyYAML==6.0.3
+holidays==0.106
+fastapi==0.143.1
+uvicorn==0.54.0
+pydantic==2.14.1

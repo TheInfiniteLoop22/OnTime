@@ -95,6 +95,12 @@ def stage_rolling() -> None:
     run_rolling()
 
 
+def stage_eta() -> None:
+    from ontime.eta.quantile import run_eta
+
+    run_eta()
+
+
 def stage_stage2() -> None:
     """Stage-2 model: re-score each order at carrier handover (validation-selected, test once)."""
     from ontime.stage2.run import run_stage2
@@ -137,6 +143,7 @@ STAGES = {
     "scores": stage_scores,
     "bundle": stage_bundle,
     "stage2": stage_stage2,
+    "eta": stage_eta,
     "rolling": stage_rolling,
     "monitor": stage_monitor,
     "report": stage_report,

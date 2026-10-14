@@ -1,4 +1,4 @@
-.PHONY: setup data build features baselines train evaluate explain impact monitor rolling stage2 scores bundle report notebooks app test lint format all
+.PHONY: setup data build features baselines train evaluate explain impact monitor rolling stage2 scores bundle report notebooks app test lint format all eta api docker-build docker-run
 
 PY = uv run python
 
@@ -70,3 +70,15 @@ format:
 	uv run ruff format .
 
 all: data build impact features baselines train evaluate explain monitor rolling stage2 scores report
+
+eta:
+	$(PY) -m ontime.pipeline eta
+
+api:
+	uv run --extra api uvicorn ontime.api.app:app --port 8000
+
+docker-build:
+	docker build -t ontime-api .
+
+docker-run:
+	docker run --rm -p 8000:8000 ontime-api
