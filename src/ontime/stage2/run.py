@@ -31,7 +31,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 from ontime.config import load_config, project_path  # noqa: E402
 from ontime.data.build_orders import build_all_orders  # noqa: E402
 from ontime.data.load import load_all  # noqa: E402
+from ontime.evaluation.calibration import expected_calibration_error  # noqa: E402
 from ontime.evaluation.metrics import (  # noqa: E402
+    classification_metrics,
     daily_topk_table,
     evaluate_scores,
     paired_bootstrap_pr_auc_diff,
@@ -39,6 +41,7 @@ from ontime.evaluation.metrics import (  # noqa: E402
 )
 from ontime.evaluation.policy import simulate_policy  # noqa: E402
 from ontime.features.build import FEATURE_COLUMNS  # noqa: E402
+from ontime.models.calibrate import CALIBRATORS, choose_calibrator  # noqa: E402
 from ontime.models.data import category_levels, prepare_frame  # noqa: E402
 from ontime.models.rolling import paired_day_bootstrap_lift  # noqa: E402
 from ontime.models.splits import select_split  # noqa: E402
@@ -151,6 +154,65 @@ def run_stage2(write: bool = True) -> dict:
     t2_tbl = daily_topk_table(dates, y, p2, 0.10, seed)
     lift_d, lift_ci = paired_day_bootstrap_lift(t2_tbl, t1_tbl, n_boot, seed)
 
+    # ---- calibration: ranking is the product, but probabilities are offered with honest limits.
+    # The stage-2 model was tuned on validation, so no clean validation slice exists for the
+    # calibrator; method choice is forward in time (fit up to calib_fit_end, check after), and the
+    # TEST period is used only to REPORT calibration quality, never to fit it.
+    p_val = s2_score(val)
+    cut = pd.Timestamp(cfg["tuning"]["calib_fit_end"]) + pd.Timedelta(days=1)
+    fit_m = (val["approved_at"] < cut).to_numpy()
+    method, cal_table = choose_calibrator(p_val[fit_m], yva[fit_m], p_val[~fit_m], yva[~fit_m])
+    calibrator = CALIBRATORS[method]().fit(p_val, yva)
+    p2_cal = np.asarray(calibrator.transform(p2), dtype=float)
+    calibration = {
+        "method": method,
+        "forward_selection_scores_validation": cal_table,
+        "fit_rows": int(len(val)),
+        "test": {
+            "raw": {**classification_metrics(y, p2), "ece": expected_calibration_error(y, p2)},
+            "calibrated": {
+                **classification_metrics(y, p2_cal),
+                "ece": expected_calibration_error(y, p2_cal),
+            },
+            "stage1_deployed": {
+                **classification_metrics(y, p1),
+                "ece": expected_calibration_error(y, p1),
+            },
+            "constant_at_true_rate_brier": float(y.mean() * (1 - y.mean())),
+        },
+        "caveat": "Calibrator fitted on validation scores of a model tuned on validation (mildly "
+        "optimistic); the base rate moved between periods, so probabilities remain relative scores.",
+    }
+    if write:
+        mdir = project_path(cfg["paths"]["models_dir"])
+        mdir.mkdir(parents=True, exist_ok=True)
+        joblib.dump(
+            {
+                "model": model,
+                "calibrator": calibrator,
+                "method": method,
+                "levels": levels,
+                "columns": cols,
+                "kind": chosen,
+                "meta": {"params": cand[chosen]["params"], "train_orders": int(len(train)),
+                         "decision_time": "carrier handover (t1 = max(handover, approval))"},
+            },
+            mdir / "stage2.joblib",
+        )  # fmt: skip
+        by_day = pd.DataFrame(
+            {"t1": test["t1"].to_numpy(), "p2": p2_cal, "order_id": test["order_id"].to_numpy()}
+        )
+        by_day["day"] = by_day["t1"].dt.normalize()
+        by_day["n_day"] = by_day.groupby("day")["order_id"].transform("size")
+        by_day["rank_day"] = by_day.groupby("day")["p2"].rank(ascending=False, method="first")
+        by_day["pct_day"] = by_day["rank_day"] / by_day["n_day"]
+        by_day["p2_raw"] = p2
+        by_day["p1"] = p1
+        by_day["is_late"] = y
+        by_day.to_parquet(
+            project_path(cfg["paths"]["reports_dir"]) / "stage2_test_scores.parquet", index=False
+        )
+
     test = test.assign(month=test["approved_at"].dt.strftime("%Y-%m"))
     monthly = []
     for mon, g in test.groupby("month"):
@@ -234,7 +296,9 @@ def run_stage2(write: bool = True) -> dict:
             "policy": pol.to_dict(orient="records"),
             "action_window_for_late_orders": window,
         },
-        "ranking_only": True,
+        "calibration": calibration,
+        "model_artifact": "models/stage2.joblib",
+        "ranking_only": False,
     }
     if write:
         rep = project_path(cfg["paths"]["reports_dir"])

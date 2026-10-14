@@ -1009,5 +1009,52 @@
       "median_days_to_handover": 1.236238425925926
     }
   },
-  "ranking_only": true
+  "calibration": {
+    "method": "isotonic",
+    "forward_selection_scores_validation": {
+      "none": {
+        "brier": 0.18288506293738527,
+        "log_loss": 0.5464740625159077
+      },
+      "sigmoid": {
+        "brier": 0.03551163461818392,
+        "log_loss": 0.1584020065211275
+      },
+      "isotonic": {
+        "brier": 0.034865211397245355,
+        "log_loss": 0.1575855321813537
+      }
+    },
+    "fit_rows": 20241,
+    "test": {
+      "raw": {
+        "pr_auc": 0.39459109585490815,
+        "roc_auc": 0.8257767436501556,
+        "brier": 0.13896401404724404,
+        "log_loss": 0.4408482280224443,
+        "base_rate": 0.0454903913999917,
+        "ece": 0.28975590778979704
+      },
+      "calibrated": {
+        "pr_auc": 0.37778891128152314,
+        "roc_auc": 0.8238750754224052,
+        "brier": 0.03481062938172505,
+        "log_loss": 0.1453539325284362,
+        "base_rate": 0.0454903913999917,
+        "ece": 0.02189802988227404
+      },
+      "stage1_deployed": {
+        "pr_auc": 0.09300046808104588,
+        "roc_auc": 0.7014941491892468,
+        "brier": 0.04347974245967263,
+        "log_loss": 0.17726217759951143,
+        "base_rate": 0.0454903913999917,
+        "ece": 0.015007123063306961
+      },
+      "constant_at_true_rate_brier": 0.04342101569026726
+    },
+    "caveat": "Calibrator fitted on validation scores of a model tuned on validation (mildly optimistic); the base rate moved between periods, so probabilities remain relative scores."
+  },
+  "model_artifact": "models/stage2.joblib",
+  "ranking_only": false
 }
