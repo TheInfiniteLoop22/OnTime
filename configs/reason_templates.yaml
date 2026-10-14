@@ -89,3 +89,26 @@ groups:
   geo_quality:
     features: [geo_imputed]
     text: "Location lookup was {geo_status}"
+
+# ---------------------------------------------------------------------------------------------
+# Stage 2 (re-scored at carrier handover). These groups are used ONLY by the stage-2 model, in
+# addition to every group above (stage-2 contributions also cover the approval-time features).
+# Facts only, as above. "days_to_handover" is days from approval to handover; a negative
+# handover_vs_limit_days means the seller handed over before the shipping-limit date.
+# ---------------------------------------------------------------------------------------------
+stage2_groups:
+  handover_timing:
+    features: [days_to_handover, handover_vs_limit_days]
+    text: "Seller handed the parcel to the carrier {days_to_handover:.1f} days after approval ({handover_vs_limit_days:+.1f} days vs the shipping-limit date)"
+
+  time_left:
+    features: [promise_left_at_handover_days]
+    text: "{promise_left_at_handover_days:.1f} days remain before the promised date at handover"
+
+  seller_handover_history:
+    features: [seller_late_handover_rate_30d]
+    text: "Seller's recent late-handover rate is {seller_late_handover_rate_30d:.0%}"
+
+  destination_backlog:
+    features: [dest_backlog_share]
+    text: "{dest_backlog_share:.0%} of recent shipments to this state are still in transit"

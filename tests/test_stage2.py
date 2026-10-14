@@ -132,3 +132,21 @@ def test_seller_handover_rate_excludes_self_and_future():
     # the global prior in the implementation may include the order itself when its handover was
     # earlier than t1; allow a tiny tolerance for that single order
     assert f.loc[i, "seller_late_handover_rate_30d"] == pytest.approx(expected, abs=2e-3)
+
+
+# ------------------------------------------------------------------ stage-2 reason groups
+def test_stage2_templates_cover_every_stage2_feature_exactly_once():
+    import pytest
+
+    from ontime.explain.reason_codes import load_templates
+    from ontime.stage2.explain import ALL_COLUMNS, stage2_templates, validate_stage2_templates
+
+    t = stage2_templates(load_templates())
+    assert validate_stage2_templates(t) == []
+    from ontime.explain.reason_codes import feature_to_group
+
+    assert set(feature_to_group(t)) == set(ALL_COLUMNS)
+    bad = load_templates()
+    bad["stage2_groups"] = {"distance": {"features": ["days_to_handover"], "text": "x"}}
+    with pytest.raises(ValueError):
+        stage2_templates(bad)

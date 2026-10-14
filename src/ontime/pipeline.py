@@ -100,6 +100,9 @@ def stage_stage2() -> None:
     from ontime.stage2.run import run_stage2
 
     run_stage2()
+    from ontime.stage2.explain import run_stage2_explain
+
+    run_stage2_explain()
 
 
 def stage_scores() -> None:
