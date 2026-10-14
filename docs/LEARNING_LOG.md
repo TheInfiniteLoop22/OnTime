@@ -196,3 +196,38 @@ absolute risk when conditions shift.
 **Why can a simple model beat a fancy one out of time?** Flexible models can learn patterns
 specific to the period they were tuned on (like a Feb-Mar surge). Constrained models carry less
 of that baggage. The only way to know is a later hold-out - which is what val_calib is.
+
+---
+
+## Phase 7 - Final evaluation
+
+**Why was the test set opened only once?** Every look at a hold-out set that influences a
+decision turns it into a second validation set. After many looks its scores are optimistic.
+One look, with the code and the primary model fixed in advance, keeps the number honest.
+
+**How do you read PR-AUC = 0.093 here?** The base rate is 4.5%, so random ranking gives 0.045;
+0.093 is about twice as good, and the 95% CI [0.085, 0.105] excludes the base rate by a wide
+margin. Absolute PR-AUC looks small only because late orders are rare.
+
+**What is lift@10% = 2.2?** If ops acts on the 10% highest-risk orders of each day, the share
+of those that are truly late is 2.2 times the overall late rate.
+
+**How do you compare two models fairly?** Paired bootstrap: resample orders once and score both
+models on the same resample; the interval for the DIFFERENCE is much tighter than comparing two
+separate intervals. If it contains 0, there is no reliable difference.
+
+**Why can a calibrator fail out of time, and why did monthly recalibration not rescue it?**
+The calibrator maps scores to the late rate seen in its fitting window. If the monthly late
+rate jumps unpredictably (1.2% to 7.5% here), any trailing window lags it. Rank is robust to
+that; absolute probability is not.
+
+**What is concept/regime drift in this project?** The relationship between features and
+lateness changed over the summer: ROC-AUC fell from 0.78 to 0.57. The fix is monitoring
+(PSI/rolling PR-AUC) and retraining, not a better static model.
+
+**Why is a "perfect ranking" line in the policy plot?** Capacity caps how many late orders can
+be reached. Comparing against that ceiling shows how much of the achievable benefit the model
+captures (at 10% capacity and p = 30%: about 74 of a ceiling of 306).
+
+**Why a simulation and not a result?** We do not know how often an intervention actually
+works; p is an assumption. The CI shows sampling uncertainty over days, not uncertainty in p.

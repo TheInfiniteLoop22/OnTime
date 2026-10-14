@@ -302,3 +302,42 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-052 - Determinism is checked by running training twice (Phase 6)
 - **Why:** CLAUDE.md rule 7. Result: identical for LR/LightGBM/EBM; RF within ~1e-17 due to
   parallel float summation, which is acceptable and documented.
+
+---
+
+### D-053 - Primary model fixed by a pre-registered rule (Phase 7)
+- **Rule:** best PR-AUC on val_calib (validation data never used for tuning); committed in
+  code before the test run (commit 8c95fb6). Outcome: logistic regression.
+- **Why:** choosing the headline model after seeing test is p-hacking. The rule is cheap,
+  mechanical and auditable.
+
+### D-054 - Evaluation code is debugged on validation via `--dry-run` (Phase 7)
+- **Why:** the test set must be read once. A dry run exercises the identical code path on
+  validation (written to a git-ignored folder), so nothing in the real run is a first try.
+
+### D-055 - Report both deployed and rolling recalibration; report the surprise (Phase 7)
+- **Why:** Phase 6 predicted over-prediction under a falling base rate and I proposed rolling
+  recalibration as the production remedy. On test it did not help (Brier 0.0454 vs 0.0435).
+  A trailing window lags month-to-month swings of 1.2%-7.5%. Conclusion: do not promise
+  absolute probabilities; present risk bands and rank-based decisions.
+
+### D-056 - Policy simulation: per-day quota, assumed p, analytic random, oracle bound (Phase 7)
+- **Why:** capacity is daily; p is unknowable from this data so it is swept; the analytic
+  random baseline avoids Monte-Carlo noise; the oracle shows how much headroom exists given
+  capacity, so gains are read against a ceiling, not just against zero.
+- **Label:** simulation, never a measured outcome; the CI covers sampling noise over days only,
+  not uncertainty in p.
+
+### D-057 - Slice rule: flag if ROC-AUC is > 0.05 below overall and >= 30 late orders (Phase 7)
+- **Why:** per-slice AUCs on few positives are noise; a minimum count plus a margin keeps the
+  table to differences worth discussing. Thresholds are conventions, stated in the report.
+
+### D-058 - Review-star translation given as a range (Phase 7)
+- **Why:** Phase 3 showed the late-vs-on-time gap depends on when the review was written
+  (0.55 vs 1.97 stars). Quoting a single number would overstate certainty; both are labelled
+  as associations.
+
+### D-059 - Primary-model result is reported, not explained away (Phase 7)
+- **Why:** the tuned nonlinear models did not beat plain logistic regression and the rule
+  baseline collapsed on test. These are the findings; any story of "the better model needs
+  more tuning" would require touching the test set again, which is not allowed.

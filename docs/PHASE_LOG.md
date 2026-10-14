@@ -351,3 +351,77 @@ is the honest out-of-sample column.
 surge-specific, but it uses val_calib's lesson, so val_calib would stop being fully clean.
 
 **Verification:** pytest 78 passed; ruff clean; `make train` ~5 minutes; saved models reload.
+
+---
+
+## Phase 7 - Final evaluation on the test set (2026-10-14)
+
+**Goal:** evaluate every model on the test set once, with intervals, and value the policy.
+
+**Acceptance (BUILD_PLAN):** `make evaluate` regenerates everything deterministically;
+`results.md` references every figure; glass-box vs black-box gap stated with CI.
+
+**Protocol (fixed BEFORE test was opened; commit 8c95fb6)**
+1. Primary model by pre-registered rule: best PR-AUC on val_calib -> logistic regression.
+2. Entire evaluation code was developed and debugged on the VALIDATION split (`--dry-run`,
+   written to the git-ignored `reports/dryrun/`); test rows were not read until the final run.
+3. Test unlocked only inside the evaluation stage (`final_evaluation=True`). Run once.
+
+**Built**
+- `evaluation/calibration.py` (reliability table, ECE, rolling recalibration using only
+  outcomes delivered before each month), `evaluation/slices.py`, `evaluation/policy.py`
+  (capacity x intervention-success simulation vs random, rule and an oracle bound),
+  `evaluation/plots.py` (5 figures), `evaluation/report.py` (results.md from results.json),
+  `evaluation/run.py` (orchestration). `make evaluate`; `--dry-run` flag.
+- Outputs: `reports/results.json`, `reports/results.md`, `reports/slices.csv`,
+  `reports/policy_simulation.csv`, `reports/error_analysis_<model>.csv` (x4), 5 figures
+  `reports/figures/test_*.png`.
+- Tests: `tests/test_evaluation.py` (7). Suite: 85 passing.
+
+**Results (TEST, 24,093 orders approved 2018-05-01..08-18, 1,096 late = 4.5%; all from results.json)**
+| model | PR-AUC [95% CI] | ROC-AUC | Brier | lift@10% [95% CI] |
+|---|---|---|---|---|
+| guess training rate | 0.045 [0.043, 0.048] | 0.500 | 0.0435 | 1.03 [0.89, 1.17] |
+| hand-written rule | 0.048 [0.045, 0.051] | 0.527 | 0.0436 | 0.94 [0.75, 1.15] |
+| **logistic regression** | **0.093 [0.085, 0.105]** | 0.701 | 0.0435 | **2.20 [1.85, 2.62]** |
+| random forest | 0.075 [0.069, 0.083] | 0.665 | 0.0462 | 1.63 [1.38, 1.89] |
+| LightGBM | 0.078 [0.072, 0.086] | 0.683 | 0.0428 | 1.96 [1.66, 2.28] |
+| EBM | 0.074 [0.068, 0.082] | 0.656 | 0.0430 | 1.64 [1.36, 1.96] |
+
+- **Glass-box vs black-box:** EBM - LightGBM = -0.004 PR-AUC, 95% CI [-0.009, +0.002]: no
+  reliable difference. LR - LightGBM = +0.015 [+0.009, +0.024]; EBM - LR = -0.019 [-0.028, -0.012].
+  Verdict: no accuracy is given up by choosing the glass-box EBM over LightGBM; and simplest
+  (logistic regression) is best here.
+- **Hand-written rule is no better than guessing on test** (PR-AUC 0.048 vs base rate 0.045,
+  lift 0.94): its train-period signal did not survive the regime change.
+- **Calibration:** deployed calibrators are decent in the low/mid range (ECE 0.011-0.015 for LR,
+  LightGBM, EBM) but over-predict at the top end (e.g. LR bins predicted ~19% vs ~11%
+  observed). Brier is no better than a constant (0.0435 vs 0.0434) but log loss improves
+  (LR 0.177 vs 0.186). The random forest is clearly mis-calibrated (ECE 0.058).
+- **Rolling monthly recalibration did NOT help on test** (LR Brier 0.0454 vs 0.0435 deployed),
+  although it helped on the validation dry run. Monthly late rate swings 1.2% - 7.5% and a
+  trailing 60-day window lags those swings.
+- **Drift:** primary-model ROC-AUC by month: 0.746 (May), 0.776 (Jun), 0.639 (Jul), 0.566
+  (Aug); lift@10% 2.83, 3.16, 2.58, 1.07. Ranking is useful for ~2 months after training
+  data ends and degrades afterwards. EBM falls below random lift in August (0.83).
+- **Weak slices (primary):** customer region NE (ROC-AUC 0.595) and S (0.626), and months
+  2018-07 / 2018-08.
+- **Policy (primary, simulation):** at 10% daily capacity and intervention success p = 30%,
+  about 74 late orders prevented (6.7% of all late) vs about 33 under random selection:
+  gain +40 [+30, +52]; the capacity-limited upper bound is 306. At 20% and p = 50%: 208
+  (19.0%) vs 110 random. The rule baseline is indistinguishable from random.
+- **Error analysis (LR top-20):** false negatives are mostly short São Paulo->São Paulo
+  shipments (median 231 km, ~20-day promise) that took ~26 days: late for reasons our
+  features cannot see (p about 0.01). False positives are long routes into AL/MA/RJ scored
+  p about 0.47 that arrived in ~12 days.
+
+**What this means**
+- The system adds real, measurable value for ranking (2.2x lift at 10% capacity) but it is a
+  modest tool: most late orders remain unpredictable from approval-time information.
+- Predicted probabilities should be shown as relative risk bands, and models need scheduled
+  retraining/monitoring (drift stretch phase S2 is justified by this result).
+
+**Deviations from the plan:** none. Note the rolling-recalibration idea (my Phase 6 hypothesis)
+was tested and not supported; reported as such.
+
+**Verification:** pytest 85 passed; ruff clean; `make evaluate` ~2 minutes.
