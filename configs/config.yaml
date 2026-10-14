@@ -1,4 +1,4 @@
-# OnTime configuration. Every path/parameter used by code comes from here.
+﻿# OnTime configuration. Every path/parameter used by code comes from here.
 # Values marked PROVISIONAL are finalized after EDA (Phase 3) and logged in docs/DECISIONS_LOG.md.
 
 seed: 42
@@ -34,8 +34,9 @@ splits:
   val_start: "2018-02-01"
   val_end: "2018-04-30"
   test_start: "2018-05-01"
-  # Orders approved after this are dropped: most are still undelivered (censoring).
-  censoring_cutoff: "2018-08-01"   # PROVISIONAL, determined from delivered-share plot in Phase 2
+  # Orders approved on/after this are dropped (right-censoring: only fast deliveries observed).
+  # Chosen from the weekly diagnostic in reports/data_quality.md (Phase 2).
+  censoring_cutoff: "2018-08-20"
 
 # Brazil bounding box used to drop bad geolocation points
 geo:

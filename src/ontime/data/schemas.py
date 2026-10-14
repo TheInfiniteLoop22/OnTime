@@ -118,6 +118,43 @@ SCHEMAS: dict[str, pa.DataFrameSchema] = {
 }
 
 
+def order_table_schema() -> pa.DataFrameSchema:
+    """Contract for data/interim/orders.parquet: one row per order, no nulls in modelling core."""
+    from ontime.config import load_config
+
+    g = load_config()["geo"]
+    lat = pa.Column(float, pa.Check.in_range(g["lat_min"], g["lat_max"]))
+    lng = pa.Column(float, pa.Check.in_range(g["lng_min"], g["lng_max"]))
+    return pa.DataFrameSchema(
+        {
+            "order_id": pa.Column(str, unique=True),
+            "order_status": pa.Column(str, pa.Check.isin(["delivered"])),
+            "order_approved_at": pa.Column("datetime64[ns]", coerce=True),
+            "order_delivered_customer_date": pa.Column("datetime64[ns]", coerce=True),
+            "order_estimated_delivery_date": pa.Column("datetime64[ns]", coerce=True),
+            "is_late": pa.Column(int, pa.Check.isin([0, 1]), coerce=True),
+            "delivery_days": pa.Column(float, pa.Check.ge(0)),
+            "primary_seller_id": pa.Column(str),
+            "seller_state": pa.Column(str, pa.Check.str_length(2, 2)),
+            "customer_state": pa.Column(str, pa.Check.str_length(2, 2)),
+            "seller_lat": lat,
+            "seller_lng": lng,
+            "customer_lat": lat,
+            "customer_lng": lng,
+            "n_items": pa.Column(int, pa.Check.ge(1), coerce=True),
+            "n_distinct_sellers": pa.Column(int, pa.Check.ge(1), coerce=True),
+            "total_price": pa.Column(float, pa.Check.ge(0)),
+            "total_freight": pa.Column(float, pa.Check.ge(0)),
+        },
+        strict=False,
+    )
+
+
+def validate_order_table(df):
+    """Validate the built order table; raises pandera SchemaErrors on any violation."""
+    return order_table_schema().validate(df, lazy=True)
+
+
 def validate_table(name: str, df):
     """Validate one raw table; raises pandera SchemaErrors listing every violation."""
     return SCHEMAS[name].validate(df, lazy=True)

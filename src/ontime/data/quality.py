@@ -149,6 +149,20 @@ def render_report(tables: dict[str, pd.DataFrame], validation: dict[str, str]) -
     )
 
 
+def upsert_section(path, start: str, end: str, section: str) -> None:
+    """Insert or replace a marker-delimited section of a markdown report (idempotent)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = path.read_text(encoding="utf-8") if path.exists() else "# Data quality report\n\n"
+    if start in existing and end in existing:
+        head = existing.split(start)[0]
+        tail = existing.split(end, 1)[1]
+        text = head + section + tail.lstrip("\n")
+    else:
+        text = existing.rstrip("\n") + "\n\n" + section
+    path.write_text(text, encoding="utf-8")
+    log.info("Updated section in %s", path)
+
+
 def write_report(tables: dict[str, pd.DataFrame], validation: dict[str, str]) -> str:
     """Write/replace the raw-quality section of reports/data_quality.md."""
     path = project_path(load_config()["paths"]["reports_dir"]) / "data_quality.md"

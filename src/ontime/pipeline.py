@@ -13,7 +13,6 @@ from ontime.config import setup_logging
 log = logging.getLogger("ontime.pipeline")
 
 PENDING: dict[str, str] = {
-    "build": "Phase 2",
     "features": "Phase 4",
     "train": "Phase 6",
     "evaluate": "Phase 7",
@@ -46,7 +45,14 @@ def stage_data() -> None:
         raise SystemExit("Raw data validation failed; see log and reports/data_quality.md")
 
 
-STAGES = {"data": stage_data}
+def stage_build() -> None:
+    """Build data/interim/orders.parquet and the population funnel report."""
+    from ontime.data.build_orders import build
+
+    build()
+
+
+STAGES = {"data": stage_data, "build": stage_build}
 
 
 def main(argv: list[str] | None = None) -> int:

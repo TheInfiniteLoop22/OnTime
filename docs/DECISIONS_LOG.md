@@ -70,3 +70,49 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-011 — `tabulate` added as a dependency (Phase 1)
 - **Why:** needed for markdown tables from pandas. CLAUDE.md says to ask before heavy
   dependencies; this is a tiny pure-Python package. Flagged here for transparency.
+
+---
+
+### D-012 - Build the table for ALL orders in SQL, filter in Python (Phase 2)
+- **Alternatives:** put the WHERE clauses inside the SQL.
+- **Why:** each exclusion is counted and logged as a funnel (BUILD_PLAN requirement), and the
+  analysis phase can reuse the unfiltered table (e.g. cancellations). SQL does joins and
+  aggregations; Python expresses the business rules readably.
+
+### D-013 - Target is date-vs-date, not timestamp-vs-timestamp (Phase 2)
+- **Why:** the promise is a calendar date (estimated timestamps are all midnight). An order
+  delivered at 23:00 on the promised day kept the promise; comparing timestamps would call it
+  late. Unit-tested on exactly that case.
+
+### D-014 - Primary seller = highest item value, ties by seller_id (Phase 2)
+- **Alternatives:** first item's seller; seller with most items; model each seller separately.
+- **Why:** value is the best simple proxy for "who matters for this shipment"; deterministic
+  tie-break gives reproducible results. 1,241 multi-seller orders (~1.3%) are affected;
+  `n_distinct_sellers` stays as a feature to capture the complexity.
+
+### D-015 - Geolocation: bounding-box filter + median centroid + state fallback (Phase 2)
+- **Alternatives:** mean centroid; geocoding API; drop orders with missing geography.
+- **Why:** median resists leftover GPS noise; dropping rows would bias against rural/new zips;
+  state centroid keeps the order and a flag lets the model/analysis see imputed rows. Counts:
+  209 seller + 260 customer rows imputed.
+
+### D-016 - Censoring cutoff 2018-08-20 from mean delivery time, not delivered share (Phase 2)
+- **Why:** delivered share barely falls in this (apparently pre-filtered) dataset, so the
+  spec's suggested diagnostic is not informative. Mean delivery time among delivered orders and
+  weekly volume collapse in the last two weeks, a truncation signature: only fast orders
+  appear. Keeping them would bias the test set toward on-time. Cost: 1,458 orders dropped.
+- **Honest caveat:** the cutoff is judged by eye on a weekly plot; a week either way would
+  not change conclusions.
+
+### D-017 - Carrier date and review columns never enter the order table (Phase 2)
+- **Why:** leakage by construction is safer than leakage by discipline. Reviews are joined
+  separately in the Phase 3 analysis only.
+
+### D-018 - Drop the 61 'delivered before approved' orders (Phase 2)
+- **Alternatives:** keep and clip the duration to zero; swap timestamps.
+- **Why:** implausible rows cannot be repaired without guessing. 61 orders is 0.06% of the data,
+  so dropping costs nothing; the count is shown in the funnel.
+
+### D-019 - Haversine, not road distance (Phase 2)
+- **Why:** only zip-prefix centroids are known; straight-line distance is a standard and cheap
+  proxy and correlates with road distance at national scale.
