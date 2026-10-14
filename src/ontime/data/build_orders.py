@@ -160,6 +160,16 @@ def build(validate: bool = True) -> pd.DataFrame:
         orders = validate_order_table(orders)
     write_funnel_report(funnel, weekly, cutoff)
 
+    # Universe of ALL approved orders with a seller, regardless of final status. Phase 4 uses it
+    # for seller-load features, which must not depend on whether an order was later delivered.
+    universe = df_all.loc[
+        df_all["order_approved_at"].notna() & df_all["primary_seller_id"].notna(),
+        ["order_id", "order_approved_at", "primary_seller_id"],
+    ]
+    uni_out = project_path(cfg["paths"]["order_universe_parquet"])
+    universe.to_parquet(uni_out, index=False)
+    log.info("Wrote %s (%d rows)", uni_out, len(universe))
+
     out = project_path(cfg["paths"]["orders_parquet"])
     out.parent.mkdir(parents=True, exist_ok=True)
     orders.to_parquet(out, index=False)

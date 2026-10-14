@@ -11,6 +11,9 @@ paths:
   reports_dir: reports
   figures_dir: reports/figures
   orders_parquet: data/interim/orders.parquet
+  # Every approved order with a seller (any status). Used ONLY for "known at t0" load features,
+  # so whether an order was later delivered cannot influence the feature.
+  order_universe_parquet: data/interim/order_universe.parquet
   features_parquet: data/processed/features.parquet
 
 kaggle:
@@ -53,7 +56,33 @@ features:
   global_window_days: 30
   black_friday_window_days: 3  # +/- days around Black Friday
   black_friday_dates: ["2016-11-25", "2017-11-24", "2018-11-23"]
-  rare_category_min_count: 500 # PROVISIONAL; rarer categories -> "other"
+  # English product category -> ~13 groups (anything unmapped -> "other"; missing -> "unknown").
+  # Grouping stops the model memorising tiny categories (the rarest have < 50 orders).
+  category_groups:
+    home_furnishing: [bed_bath_table, furniture_decor, housewares, home_confort, home_comfort_2,
+      furniture_living_room, furniture_bedroom, furniture_mattress_and_upholstery,
+      kitchen_dining_laundry_garden_furniture, la_cuisine, office_furniture]
+    health_beauty: [health_beauty, perfumery, diapers_and_hygiene]
+    sports_leisure: [sports_leisure]
+    computers_electronics: [computers_accessories, computers, electronics, tablets_printing_image,
+      audio, pc_gamer, consoles_games]
+    telephony: [telephony, fixed_telephony]
+    appliances: [home_appliances, home_appliances_2, small_appliances,
+      small_appliances_home_oven_and_coffee, air_conditioning,
+      portateis_cozinha_e_preparadores_de_alimentos]
+    fashion_accessories: [fashion_bags_accessories, fashion_shoes, fashion_underwear_beach,
+      fashion_male_clothing, fashio_female_clothing, fashion_sport, fashion_childrens_clothes,
+      luggage_accessories, watches_gifts]
+    toys_baby: [toys, baby]
+    auto: [auto]
+    garden_construction: [garden_tools, home_construction, construction_tools_construction,
+      construction_tools_lights, construction_tools_safety, costruction_tools_garden,
+      costruction_tools_tools]
+    gifts_stationery_arts: [cool_stuff, stationery, art, arts_and_craftmanship, party_supplies,
+      christmas_supplies, flowers]
+    media_music: [books_general_interest, books_technical, books_imported, cds_dvds_musicals,
+      dvds_blu_ray, music, cine_photo, musical_instruments]
+    food_pets: [food, drinks, food_drink, pet_shop]
 
 policy:
   capacity_grid: [0.05, 0.10, 0.20]          # fraction of daily orders ops can act on

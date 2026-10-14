@@ -13,7 +13,6 @@ from ontime.config import setup_logging
 log = logging.getLogger("ontime.pipeline")
 
 PENDING: dict[str, str] = {
-    "features": "Phase 4",
     "train": "Phase 6",
     "evaluate": "Phase 7",
     "explain": "Phase 8",
@@ -58,7 +57,19 @@ def stage_impact() -> None:
     run_impact()
 
 
-STAGES = {"data": stage_data, "build": stage_build, "impact": stage_impact}
+def stage_features() -> None:
+    """Build data/processed/features.parquet and reports/feature_summary.md."""
+    from ontime.features.build import build
+
+    build()
+
+
+STAGES = {
+    "data": stage_data,
+    "build": stage_build,
+    "features": stage_features,
+    "impact": stage_impact,
+}
 
 
 def main(argv: list[str] | None = None) -> int:

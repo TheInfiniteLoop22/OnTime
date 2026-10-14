@@ -169,3 +169,52 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-028 - Ruff per-file ignores for notebooks and analysis imports (Phase 3)
 - **Why:** prose lines in notebooks exceed 100 chars by design, and modules that set the
   matplotlib backend must import pyplot afterwards (E402). Scoped ignores keep real code strict.
+
+---
+
+### D-029 - Outcome is "known" at delivery, not when the promise date passes (Phase 4)
+- **Alternatives:** treat an order as known-late once its estimated date has passed undelivered
+  (available earlier in real life).
+- **Why:** waiting for delivery is simpler, strictly conservative and cannot leak. Cost: history
+  reacts a little slower to a seller that has just started slipping.
+
+### D-030 - Strict `<` on timestamps; self-exclusion falls out of the rule (Phase 4)
+- **Why:** an order's own delivery time is >= its own approval time (we dropped the 61 cases
+  where it was not), so `delivered(p) < t0(o)` can never include itself, even at identical
+  seconds. No special-case code means no special-case bug.
+
+### D-031 - One prior for every shrunk rate: global late rate known before t0 (Phase 4)
+- **Alternatives:** per-feature priors (e.g. window-specific global rate); a fixed train-set rate.
+- **Why:** one leak-safe prior is easy to explain: "a seller with no history is assumed average".
+  A fixed train-set rate would leak future information into early train rows. For the first 256
+  orders (before any delivery was observed) the prior is undefined and the feature is NaN; the
+  model pipeline imputes with a missing-indicator (Phase 6).
+- `alpha = 20` (config): a seller's own record counts as much as the prior after 20 orders.
+
+### D-032 - `customer_is_capital_metro` not implemented (Phase 4)
+- **Why:** optional in the spec and needs an external capital-prefix table (new data source);
+  customer_region, state-level rates and distance cover most of the same signal. Revisit only
+  if error analysis points at metro vs interior.
+
+### D-033 - Seller load uses the all-orders universe, not the modelling population (Phase 4)
+- **Why:** the modelling population contains only orders that were *later delivered*. Counting
+  only those would let a future outcome decide whether an order appears in a seller's load - a
+  subtle leak. Load needs no outcome, so it counts every approved order of that seller.
+
+### D-034 - Vectorized `searchsorted` over a packed (key, time) code, no per-row loops (Phase 4)
+- **Alternatives:** `merge_asof` per group; DuckDB window functions; a loop over orders.
+- **Why:** one sort + one binary search per feature scales to millions of rows with ~30 lines
+  and is directly comparable to a naive O(n^2) reference in a property test (5 seeds).
+
+### D-035 - Categorical/state handling: regions as features, states only as meta (Phase 4)
+- **Why:** FEATURE_SPEC lists regions, not states; 27 state levels are partly redundant with
+  route/customer-state late rates and invite memorisation. States stay as meta columns for
+  slicing and reason codes.
+
+### D-036 - Keep `approve_month` but flag it (Phase 4)
+- **Why:** in the spec. Risk: with one seasonal cycle it acts as a time proxy and may not
+  transfer. Will be examined with EBM shape plots in Phase 8; candidate for removal if unstable.
+
+### D-037 - Split labels use whole-day boundaries with a contiguity assertion (Phase 4)
+- **Why:** `train_end`/`val_end` are dates meant inclusively; an order approved at 23:59 on the
+  last day must be in that split. The code refuses configs with gaps or overlaps.

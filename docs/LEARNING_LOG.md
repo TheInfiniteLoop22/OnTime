@@ -90,3 +90,33 @@ promised date.
 **Why a time-based split even before modelling?** The late rate moves from ~1% to ~19% across
 months; a random split would put neighbours from the same bad week in train and test and inflate
 every metric.
+
+---
+
+## Phase 4 - Feature engineering and leakage
+
+**What is data leakage?** Using information at training or prediction time that would not be
+available when the real decision is made. It makes validation look great and production fail.
+
+**What is the exact rule for the seller late-rate?** A past order contributes only if its
+delivery time is strictly before the current order's approval time. "Approved earlier" is not
+enough - that order may still be in transit, and its eventual lateness is the future.
+
+**What happens if you ignore it?** Measured in `reports/leakage_demo.md`: the leaky version
+looks clearly better than the safe one on every split, yet cannot be reproduced in production.
+
+**What is Bayesian shrinkage, numerically?** Seller A: 3 past orders, 2 late; the platform
+average is 7%. Raw rate 67% is noise. With alpha = 20: (2 + 20*0.07) / (3 + 20) = 0.148 -
+pulled most of the way back to average. Seller B: 400 orders, 100 late: (100 + 1.4)/420 = 0.241,
+almost the raw 25%. Few orders -> trust the prior; many orders -> trust the data.
+
+**How do you compute history without a loop over orders?** Sort the past outcomes by (seller,
+time); for each query a binary search gives how many same-seller outcomes are before t0 and a
+cumulative sum gives how many were late. Tested against an obviously-correct O(n^2) loop.
+
+**Why a property test?** Hand-written cases cover only the cases you thought of. Random data
+compared against a trivially correct reference finds the ones you did not.
+
+**Why can a feature that is leak-free still drift?** Platform growth makes `seller_n_past`
+larger in later periods; the model trained on small numbers sees large ones at test time. We
+check per-split means for exactly this.
