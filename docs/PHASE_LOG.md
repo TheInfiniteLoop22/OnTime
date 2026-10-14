@@ -702,3 +702,80 @@ and keeps the Phase 7 headline numbers untouched.
 - A patch script asserted against pre-formatting text and wrote nothing; re-done against the real file.
 
 **Tests:** 143 passing (monitoring 11, stage 2 9+1 integration, reporting, app 10). Ruff clean.
+
+
+---
+
+## Phase 12 - Finishing stage 2, promise dates (S1) and an API (S3) (2026-10-15)
+
+**Why:** Phase 11 left three open items: stage 2 had no calibration, reasons or app support; the quantile
+ETA idea (S1) and the HTTP service (S3) from the stretch list had not been built. Phase 7 numbers and the
+stage-2 headline (test PR-AUC 0.3946) were not touched; the stage-2 re-run reproduced them exactly.
+
+**What was built**
+1. **Stage 2 completed** (`src/ontime/stage2/run.py`, `explain.py`)
+   - Model persisted to `models/stage2.joblib` (model, calibrator, levels, columns, kind).
+   - Calibrator chosen forward in time on validation (fit up to `calib_fit_end`, check after), refit on
+     all validation; test used only to *report* quality. Raw LightGBM is badly miscalibrated (ECE 0.29,
+     Brier 0.139); isotonic gives Brier 0.0348 / ECE 0.022 on test, vs stage 1 Brier 0.0435 / ECE 0.015 and a
+     constant-at-the-true-rate Brier of 0.0434. Stage 1's Brier is no better than the constant: its value is
+     ranking.
+   - Reason codes: four new groups in `configs/reason_templates.yaml` under `stage2_groups`
+     (handover timing, time left, seller handover history, destination backlog), merged with the stage-1
+     groups by `stage2_templates()`. Contributions via TreeSHAP; additive identity checked at runtime
+     (max error ~1e-14). Output `reports/stage2_reason_codes.parquet`, `stage2_test_scores.parquet`
+     (calibrated probability, within-day rank on the handover day), `stage2_explain_summary.json`.
+   - `lgbm_contributions` / `logreg_contributions` gained a `columns` argument so they can explain a
+     model with extra features; stage 1 behaviour unchanged (all explain tests pass untouched).
+2. **S1 promise dates** (`src/ontime/eta/quantile.py`, `make eta`, `reports/eta_results.json`)
+   - Target: whole calendar days from approval date to delivery date; lateness is `Y > promise`, which
+     reproduces `is_late` exactly (0 mismatches after a fix, see mistakes).
+   - LightGBM quantile objective at 13 levels (0.5 ... 0.99), early stopping on `val_tune`; promise =
+     `ceil(quantile)`.
+   - Operating points chosen on `val_calib`: match Olist's validation on-time share (92.4%) -> level 0.88;
+     and two safer targets (0.95, 0.97).
+   - Test (third look, disclosed): the matched point quotes **1.4 days shorter** on average
+     (20.6 vs 22.0; CI -1.4 to -1.3) *and* more orders arrive on time (96.7% vs 95.5%). From the frontier,
+     Olist's own on-time share would need ~19.1 days. For the safer 0.95 target a constant "+4 days"
+     baseline reaches 97.7% at 26.0 days vs the model's 98.7% at 26.5. Levels above ~0.95 add length
+     quickly and early-stop after only 17-75 rounds.
+3. **S3 API + Docker** (`src/ontime/api/app.py`, `Dockerfile`, `.dockerignore`, `requirements-api.txt`)
+   - `GET /health`, `/model-info`, `POST /score`, `/score/handover`, `/promise`, `GET /demo/orders/{id}`.
+   - Payload validated against the exact feature lists (422 lists missing / non-numeric fields); lazy
+     artifact loading; each score returns probability, raw probability, calibration method, relative risk
+     (probability / training late rate) and reasons.
+   - `fastapi`/`uvicorn` are an optional dependency group (`uv sync --extra api`); `httpx` is a dev dependency
+     for the test client.
+   - Docker image built and run: `/health` OK and the same order returned the same probability (0.1116)
+     as the local run. Image is ~1.9 GB (SHAP, InterpretML needed to unpickle the models); the random
+     forest is excluded from the image.
+4. **App:** Model insights -> *Stage 2* tab now shows the calibration table and group importance; a new
+   *Promise dates (S1)* tab shows the frontier, the matched operating point and the caveats.
+5. **Docs/reporting:** README and model card templates + `render.py` placeholders (`s2_cal_*`, `eta_*`);
+   notebooks 05 (wording refreshed) and 06 (new, executed); BUILD_PLAN S1/S3 ticked.
+
+**Checks**
+- Stage-2 re-run reproduces test PR-AUC 0.394591 to 6 decimals before/after the patch.
+- New tests: stage-2 templates cover every model feature exactly once and reject clashing group names; ETA
+  target reproduces `is_late` on a hand-made table (including the midnight-rounding case), pinball loss is
+  minimised at the true quantile, level selection, paired bootstrap; API validation and end-to-end
+  endpoint tests (skipped when artifacts are absent). 152 tests passing, ruff clean.
+
+**Caveats that stay attached**
+- Test-set exposure is now: stage 1 (once), stage 2 (once), promise model (once), plus the descriptive
+  reuse in the monitor and retraining study. All three later looks are labelled development evidence.
+- Calibrated probabilities are relative scores: the base rate moves between periods; the API returns a
+  relative-risk number for that reason.
+- The promise model ignores demand response; a shorter promise is only valuable if customers react to it.
+- The API is a demo service: no authentication, no rate limiting, no model versioning beyond the git hash.
+
+**Mistakes and course corrections**
+- The first ETA target disagreed with `is_late` for 0.64% of orders: `approved + float_days` landed
+  ~1e-5 s before midnight and floored to the previous date. Fixed by rounding timestamps to the second;
+  mismatch is now exactly 0 and a regression test covers it.
+- The first alpha grid (0.5, 0.8, 0.9, ...) was too coarse to match Olist's coverage (0.9 overshot);
+  added levels 0.82-0.88.
+- A README placeholder claimed "zero mismatches" as typed text; replaced by a computed placeholder.
+- A shell here-string for a docs patch was malformed and executed nothing; re-done from a script file.
+
+**Tests:** 152 passing. Ruff clean.

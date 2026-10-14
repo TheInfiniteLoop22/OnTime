@@ -489,3 +489,53 @@ New entries are appended at the end of every phase. Numbers cited here come from
 
 ### D-086 - Precompute test scores to a parquet for the app (Phase 11)
 - **Why:** cold start. The app falls back to live scoring if the file is missing.
+
+
+---
+
+### D-087 - Stage 2 now gets a calibrator (supersedes D-084) (Phase 12)
+- **Alternatives:** keep ranking only; calibrate on test (forbidden); Platt vs isotonic by hand.
+- **Why:** the raw LightGBM probabilities were unusable as percentages (ECE 0.29), and the app/API show a
+  probability. The method (none/sigmoid/isotonic) is chosen forward in time on validation exactly as for
+  stage 1; the test months only *report* quality.
+- **Cost / honesty:** the stage-2 model was tuned on validation, so the calibrator's fit is mildly
+  optimistic; the base rate still moves, so a relative-risk number is returned beside the probability.
+
+### D-088 - Stage-2 reason groups live in a separate `stage2_groups` YAML section (Phase 12)
+- **Alternatives:** add the groups to `groups` and let stage 1 ignore them.
+- **Why:** stage-1 tests assert the groups cover exactly the stage-1 features; a separate section keeps
+  those tests and the stage-1 wording untouched, and `stage2_templates()` merges them explicitly (name
+  clashes raise).
+
+### D-089 - Contribution extractors take a `columns` argument (Phase 12)
+- Rather than copying the extractors for stage 2. Default behaviour is unchanged, so no stage-1
+  result can move.
+
+### D-090 - Predict whole calendar days; the promise is the rounded-up quantile (Phase 12)
+- **Alternatives:** regress fractional days and compare timestamps; classify late/not.
+- **Why:** lateness in this dataset is a date comparison, so integer days make "coverage" exactly the share
+  with `Y <= promise` and let the code assert agreement with `is_late` before anything is trusted.
+
+### D-091 - Pick the operating point on validation by matching Olist's on-time share (Phase 12)
+- **Why:** a fair comparison needs equal safety or equal length. Matching validation coverage and then
+  reporting both length and coverage on test avoids tuning on test. A fine alpha grid (0.82-0.88) was added
+  because 0.8 and 0.9 straddled the target. Extra points at 0.95 and 0.97 target coverage show the
+  trade-off, with a "+N days" baseline beside them.
+- **Cost:** the validation and test base rates differ (Olist on-time 92.4% vs 95.5%), so the matched point
+  lands on a different coverage in test; both are reported.
+
+### D-092 - No refit on train + validation for the promise model (Phase 12)
+- Kept simple and explainable; models are used as fitted with early stopping on `val_tune`.
+- A production system would refit on all known outcomes; here it would add a second tuning decision with
+  nothing left to check it on.
+
+### D-093 - API takes a feature dict, validates it against the feature lists (Phase 12)
+- **Alternatives:** a 37-field Pydantic model per stage.
+- **Why:** the feature list is defined once in code (`FEATURE_COLUMNS`, `STAGE2_FEATURES`); duplicating it
+  as a schema invites drift. Missing / non-numeric values return 422 with names; unknown category levels
+  warn rather than fail. Artifacts load lazily so `/health` is instant.
+
+### D-094 - FastAPI is an optional dependency group; the image is big on purpose (Phase 12)
+- CLAUDE.md says no new heavy dependencies without asking; S3 was explicitly requested, so `fastapi` and
+  `uvicorn` are in an `api` extra and `httpx` is dev-only. The image needs SHAP and InterpretML to
+  unpickle the saved models (~1.9 GB); slimming (ONNX export) is listed as future work, not done.

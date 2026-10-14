@@ -7,7 +7,8 @@ PROTOCOL (fixed before the test period was scored by this model):
   * selection   : the better of the two by VALIDATION PR-AUC is the stage-2 model (pre-registered);
   * test        : only the selected model is scored on test, once, next to the deployed stage-1
                   model on the SAME orders (paired bootstrap for the difference);
-  * ranking only: no calibration is fitted at this stage (use rank/bands).
+  * ranking first; a calibrator is fitted on validation afterwards (forward-in-time method
+    choice) and its test-period quality is reported, never used for fitting.
 
 DISCLOSURE: the test months were already used once to evaluate the stage-1 models. This is a second,
 separately pre-declared model evaluated on the same months; it does not change any stage-1 result,

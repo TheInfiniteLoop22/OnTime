@@ -390,3 +390,48 @@ data to confirm.
 
 **What does `make bundle` buy you?** A reproducible, small, data-bearing branch for hosting without
 polluting `main` with large or licensed files, and a deployment you can verify in a clean environment.
+
+
+---
+
+## Phase 12 - Calibration, quantile models, and serving
+
+**Why can a model rank well and still have terrible probabilities?** Ranking only needs the order of the
+scores. LightGBM trained with class weights or early stopping can push probabilities far from observed
+frequencies (ECE 0.29 here) without changing the order. A calibrator is a monotone map fitted on held-out
+data, so ranking is unchanged and the numbers become readable.
+
+**Why isotonic and why choose it forward in time?** Isotonic is flexible but needs enough data; sigmoid is a
+two-parameter fit. Picking by Brier on a later slice than the fit slice mimics deployment (calibrate on the
+past, use on the future) and avoids rewarding a method that merely memorised the fit period.
+
+**What is a Brier score and why compare it with a constant?** Mean squared error of the probability. A
+constant that always predicts the base rate scores p(1-p); a model must beat that to have useful
+probabilities. Stage 1 (0.0435) does not beat it (0.0434): its value is the ranking, not the probability.
+
+**What is quantile regression and the pinball loss?** Minimising absolute error gives the median. Weighting
+under- and over-prediction by alpha and 1-alpha gives the alpha-quantile. The pinball loss is the scoring
+rule whose minimiser is that quantile, so it is also how you evaluate it.
+
+**Why turn a classifier question into a quantile question?** The business controls the promise. "How long
+must the promise be so that 90% of orders meet it?" is the decision; a late probability only describes a
+fixed promise.
+
+**How do you compare two promise policies fairly?** On two axes at once: average promise length and share
+delivered in time. Fix one (validation coverage) and report the other, with a frontier plot and a "just add
+N days" baseline so that the model has to beat the obvious thing.
+
+**What was the rounding bug and what did it teach?** `approved + 30.3225 days` produced 23:59:59.99999 on
+the day before the real estimated date, so the date comparison was off for 0.6% of orders. Checking that a
+new definition reproduces an existing label *exactly* before building on it caught it. Round timestamps
+before taking dates.
+
+**Why return a relative risk from an API?** Probabilities depend on the base rate, which drifts; a ratio to
+the training base rate is easier to act on and honest about what a calibrated number can promise.
+
+**Why validate payloads against the feature list?** Silent NaN-filling would let a typo in a feature name
+produce a confident wrong score. A 422 that names the missing fields fails loudly where it can be fixed.
+
+**What does Docker give you here, and what did it cost?** A pinned runtime that returned the same score as the
+local run (a reproducibility check, not just packaging). The cost is size: SHAP and InterpretML are needed
+only to unpickle the models, which is why the image is ~1.9 GB.

@@ -161,6 +161,65 @@ def _stage2_values(res: dict) -> dict[str, str]:
     }
 
 
+def _s2_cal_values() -> dict[str, str]:
+    """Placeholders for the stage-2 calibration block."""
+    cal = _load("stage2_results.json")["calibration"]
+    t = cal["test"]
+    return {
+        "s2_cal_method": cal["method"],
+        "s2_cal_brier_raw": f"{t['raw']['brier']:.4f}",
+        "s2_cal_brier": f"{t['calibrated']['brier']:.4f}",
+        "s2_cal_brier_s1": f"{t['stage1_deployed']['brier']:.4f}",
+        "s2_cal_ece_raw": f"{t['raw']['ece']:.3f}",
+        "s2_cal_ece": f"{t['calibrated']['ece']:.3f}",
+        "s2_cal_ece_s1": f"{t['stage1_deployed']['ece']:.3f}",
+        "s2_const_brier": f"{t['constant_at_true_rate_brier']:.4f}",
+    }
+
+
+def _eta_values() -> dict[str, str]:
+    """Placeholders for the S1 promise-date (quantile) model."""
+    e = _load("eta_results.json")
+    te, o = e["test"], e["test"]["olist"]
+    ch = te["chosen"]["match_olist"]
+    v = ch["vs_olist"]
+    rows = ["| Operating point (chosen on validation) | Level | Avg promise (days) | On time | vs Olist length | vs Olist on-time |",
+            "|---|---|---|---|---|---|"]  # fmt: skip
+    rows.append(
+        f"| Olist as quoted | - | {o['mean_promise_days']:.1f} | {_pct(o['coverage'])} | - | - |"
+    )
+    for name, r in te["chosen"].items():
+        d = r["vs_olist"]
+        rows.append(
+            f"| model, {name.replace('_', ' ')} | {r['alpha']} | {r['test_mean_promise_days']:.1f} | "
+            f"{_pct(r['test_coverage'])} | {d['length_diff']:+.1f} d {_ci(d['length_diff_ci'], 1)} | "
+            f"{d['coverage_diff'] * 100:+.1f} pp {_ci([x * 100 for x in d['coverage_diff_ci']], 1)} |"
+        )
+    shift = ch.get("shift_baseline", {})
+    return {
+        "eta_alpha": str(ch["alpha"]),
+        "eta_val_cov": _pct(ch["target_validation_coverage"]),
+        "eta_olist_len": f"{o['mean_promise_days']:.1f}",
+        "eta_olist_cov": _pct(o["coverage"]),
+        "eta_model_len": f"{ch['test_mean_promise_days']:.1f}",
+        "eta_model_cov": _pct(ch["test_coverage"]),
+        "eta_len_diff": f"{v['length_diff']:+.1f}",
+        "eta_len_ci": _ci(v["length_diff_ci"], 1),
+        "eta_cov_diff": f"{v['coverage_diff'] * 100:+.1f}",
+        "eta_cov_ci": _ci([x * 100 for x in v["coverage_diff_ci"]], 1),
+        "eta_interp_len": f"{te['interpolated_same_level']['length_at_olist_test_coverage']:.1f}",
+        "eta_n_test": f"{e['orders']['test']:,}",
+        "eta_mismatch": f"{e['lateness_definition_mismatch']:.2%}",
+        "eta_table": "\n".join(rows),
+        "eta_shift_note": (
+            f"A constant shift of {shift['shift_days']} days on Olist's promise reaches "
+            f"{_pct(shift['test_coverage'])} on time at {shift['test_mean_promise_days']:.1f} days."
+            if shift
+            else ""
+        ),
+    }
+
+
 def _rolling_values() -> dict[str, str]:
     """Placeholders for the monthly-retraining / calendar-proxy ablation (a negative result)."""
     r = _load("rolling_backtest.json")
@@ -320,7 +379,10 @@ def collect_values() -> dict[str, str]:
         prim,
     )
 
-    extra = {**_stage2_values(res), **_rolling_values(), **_drift_values()}
+    extra = {
+        **_stage2_values(res), **_s2_cal_values(), **_eta_values(),
+        **_rolling_values(), **_drift_values(),
+    }  # fmt: skip
     return {
         **extra,
         "test_orders": f"{pop['orders']:,}",

@@ -31,6 +31,8 @@ ARTIFACT_FILES = [
     "reports/impact.json",
     "reports/explain_summary.json",
     "reports/stage2_results.json",
+    "reports/stage2_explain_summary.json",
+    "reports/eta_results.json",
     "reports/test_reason_codes.parquet",
     "reports/test_scores.parquet",
     "reports/slices.csv",

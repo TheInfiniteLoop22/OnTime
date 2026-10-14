@@ -135,8 +135,58 @@ regression):
 - Simulated policy: at 10% daily capacity and an assumed 30% success rate: about 154 late orders prevented when acting at handover (14% of all late) vs 79 when acting at approval and 35 for random picking; ceiling 295.
 - **Honest status.** The test months had already been used once to evaluate stage 1. Stage 2 was
   declared separately, selected on validation (LightGBM by validation PR-AUC), scored once, and
-  is reported next to stage 1 on the same orders, but it is *not* a first-look hold-out. It outputs
-  a ranking only (no calibration was fitted at this stage).
+  is reported next to stage 1 on the same orders, but it is *not* a first-look hold-out.
+- **Probabilities.** Ranking is the product. A isotonic calibrator, fitted on validation only,
+  brings the test Brier score from 0.1390 (raw) to 0.0348 and ECE from
+  0.290 to 0.022; stage 1 scores 0.0348 vs 0.0435 Brier and
+  0.015 ECE, and always predicting the true late rate scores 0.0434. Base rates
+  move between periods, so treat the percentages as relative scores.
+- **Reasons.** Handover timing, seller handover history and destination backlog are explained in the same
+  plain-English format as stage 1 (`reports/stage2_reason_codes.parquet`).
+
+## Promise dates: quote shorter promises where it is safe (S1)
+
+A LightGBM *quantile* model predicts how many calendar days an order will take to arrive, at levels from
+0.5 to 0.99, using only approval-time features. The promise is the predicted quantile rounded up to whole
+days; "on time" is judged exactly as the dataset does (delivery date vs promised date), which the code
+checks reproduces `is_late` (it refuses to run above 1% disagreement; measured: 0.00%). Levels are chosen on validation; the test months
+(24,093 orders) are a third look and are labelled as such.
+
+| Operating point (chosen on validation) | Level | Avg promise (days) | On time | vs Olist length | vs Olist on-time |
+|---|---|---|---|---|---|
+| Olist as quoted | - | 22.0 | 95.5% | - | - |
+| model, match olist | 0.88 | 20.6 | 96.7% | -1.4 d [-1.4, -1.3] | +1.2 pp [1.0, 1.4] |
+| model, cov 0.95 | 0.93 | 26.5 | 98.7% | +4.5 d [4.4, 4.6] | +3.2 pp [3.0, 3.5] |
+| model, cov 0.97 | 0.97 | 36.1 | 99.6% | +14.1 d [14.0, 14.2] | +4.1 pp [3.9, 4.4] |
+
+- Matching Olist's validation on-time share (92.4%) selected level 0.88. On the test
+  months that promise is -1.4 days [-1.4, -1.3] vs Olist **and** +1.2 pp
+  [1.0, 1.4] more orders on time.
+- Read off the model's frontier, Olist's own on-time share would need an average promise of about
+  19.1 days instead of 22.0 (descriptive, not tuned on test).
+- A constant shift of 0 days on Olist's promise reaches 95.5% on time at 22.0 days. Very high levels buy little: the extreme tail is hard to predict and the promise grows
+  quickly.
+- Not modelled: how customers react to shorter or longer promises. See
+  [`notebooks/06_promise_dates_and_api.ipynb`](notebooks/06_promise_dates_and_api.ipynb).
+
+## Scoring API and Docker (S3)
+
+```bash
+uv sync --extra api && make api          # http://127.0.0.1:8000/docs
+make docker-build && make docker-run     # same service in a container (needs `make all` first)
+```
+
+| Endpoint | What it does |
+|---|---|
+| `GET /health`, `GET /model-info` | liveness; model, training window, feature lists, reported metrics |
+| `POST /score` | stage 1 at approval: probability, relative risk, reasons that add and reduce risk |
+| `POST /score/handover` | stage 2: adds the five handover features |
+| `POST /promise` | whole-day promises at several levels, plus the validated operating points |
+| `GET /demo/orders/{id}` | score a known order by id (demo only) |
+
+Payloads are validated (missing or non-numeric features return 422 with the list). The container returned
+the same probability for the same order as the local run. The image is large (about 2 GB) because the
+explainability stack (SHAP, InterpretML) is needed to load the saved models.
 
 ## Things I tried that did not work
 
@@ -229,7 +279,7 @@ make app                           # open the Streamlit app
 make test && make lint             # pytest (incl. a synthetic mini-Olist pipeline run) and ruff
 ```
 
-Individual stages: `make stage2` (handover model), `make monitor` (drift tables), `make rolling` (retraining study), `make scores` (precompute app scores for a fast start).
+Individual stages: `make stage2` (handover model), `make eta` (promise dates), `make monitor` (drift tables), `make rolling` (retraining study), `make scores` (precompute app scores for a fast start).
 
 ### Deploy the app
 
@@ -249,10 +299,12 @@ runs the real stages on it, so CI never needs the Kaggle download.
 | `src/ontime/explain` | EBM / SHAP / coefficient explanations, agreement, reason codes |
 | `src/ontime/serving` | scoring + what-if service used by the app |
 | `src/ontime/stage2` | handover-time features (backlog, handover timing) and the stage-2 model |
+| `src/ontime/eta` | quantile promise-date model (S1) |
+| `src/ontime/api` | FastAPI scoring service (S3), see `Dockerfile` |
 | `src/ontime/monitoring` | PSI drift and performance-by-month monitor |
 | `src/ontime/deploy` | deploy-branch bundle builder |
 | `app/` | Streamlit app (`Home.py`, `views/`, `ontime_ui/`) |
-| `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability, 05 diagnosing the decay and the handover stage |
+| `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability, 05 diagnosing the decay and the handover stage, 06 promise dates and the API |
 | `reports/` | generated results, model card, figures (the data and models are git-ignored) |
 | `docs/` | specs, `PHASE_LOG.md` (what was done), `DECISIONS_LOG.md` (why), `LEARNING_LOG.md` (interview notes) |
 
@@ -276,13 +328,13 @@ runs the real stages on it, so CI never needs the Kaggle download.
 
 ## Future work
 
-1. Confirm Stage 2 on genuinely new data (the same months were seen twice); calibrate it and add its
-   reason codes to the app.
-2. A randomized pilot to measure the intervention success rate the policy simulator assumes.
-3. Quantile ETA model: could promises be shorter on safe routes and longer on risky ones?
-4. FastAPI `/score` endpoint with reason codes (the scoring service already exists in `src/`).
-5. Streamlit Community Cloud deployment from the `deploy` branch (see below), and scheduled retraining
+1. Confirm Stage 2 and the promise model on genuinely new data (the same months were seen two and three
+   times).
+2. A randomized pilot to measure the intervention success rate the policy simulator assumes, and the
+   demand response to shorter promises.
+3. Streamlit Community Cloud deployment from the `deploy` branch (see below), and scheduled retraining
    driven by the drift monitor.
+4. Slim the API image (export the models to ONNX or drop SHAP at inference) if size matters.
 
 ## Data and licence
 

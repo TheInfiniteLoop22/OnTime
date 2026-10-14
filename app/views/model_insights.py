@@ -46,6 +46,7 @@ tabs = st.tabs(
         "Explainability",
         "Where it is weak",
         "Limits",
+        "Promise dates (S1)",
     ]
 )
 
@@ -261,10 +262,66 @@ with tabs[1]:
         c.callout(
             "<b>Read with care.</b> The test months were already used once to evaluate the approval-time "
             "model, so this is a second, separately pre-declared model on the same months (selected by "
-            "validation, scored once), not a first-look hold-out. It outputs a ranking only (no calibration "
-            "fitted); use rank and bands.",
+            "validation, scored once), not a first-look hold-out. Rank and bands are the product; the "
+            "calibrated probability below is offered with the limits shown.",
             kind="warn",
         )
+
+        cal = s2.get("calibration")
+        if cal:
+            st.markdown("#### Probability quality (test months)")
+            ct = cal["test"]
+            cal_rows = pd.DataFrame(
+                {
+                    "Version": [
+                        "Stage 2, raw",
+                        f"Stage 2, calibrated ({cal['method']})",
+                        "Stage 1 (deployed)",
+                    ],
+                    "Brier": [
+                        ct["raw"]["brier"],
+                        ct["calibrated"]["brier"],
+                        ct["stage1_deployed"]["brier"],
+                    ],
+                    "Log loss": [
+                        ct["raw"]["log_loss"],
+                        ct["calibrated"]["log_loss"],
+                        ct["stage1_deployed"]["log_loss"],
+                    ],
+                    "ECE": [
+                        ct["raw"]["ece"],
+                        ct["calibrated"]["ece"],
+                        ct["stage1_deployed"]["ece"],
+                    ],
+                }
+            )
+            st.dataframe(
+                cal_rows.style.format({"Brier": "{:.4f}", "Log loss": "{:.3f}", "ECE": "{:.3f}"}),
+                hide_index=True,
+                use_container_width=True,
+            )
+            c.caption(
+                f"Constant prediction at the true late rate scores Brier {ct['constant_at_true_rate_brier']:.4f}. "
+                "The calibrator was fitted on validation only; these test numbers were not used to fit it. "
+                + cal["caveat"]
+            )
+        s2x = data.REPORTS / "stage2_explain_summary.json"
+        if s2x.exists():
+            ex = data.read_json("stage2_explain_summary.json")
+            imp = pd.Series(ex["mean_abs_group_contribution"]).sort_values().tail(12)
+            fig = go.Figure(
+                go.Bar(x=imp.values, y=[g.replace("_", " ") for g in imp.index], orientation="h")
+            )
+            fig.update_layout(
+                title="What drives the handover score (mean |contribution|, log-odds)",
+                height=380,
+                margin=dict(l=10, r=10, t=50, b=10),
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            c.caption(
+                "Handover timing, time left before the promise and destination backlog sit next to the "
+                "approval-time groups; each order gets its own reasons (reports/stage2_reason_codes.parquet)."
+            )
 
 # ------------------------------------------------------------------ calibration
 with tabs[2]:
@@ -508,3 +565,81 @@ information known at order approval.
   (base rate {vm["val_calib"]["base_rate"]:.3f}).
 """
     )
+
+# ------------------------------------------------------------------ promise dates (S1)
+with tabs[7]:
+    eta_path = data.REPORTS / "eta_results.json"
+    if not eta_path.exists():
+        st.info("Promise-date results are missing. Run `make eta` and reload.")
+    else:
+        eta = data.read_json("eta_results.json")
+        te = eta["test"]
+        st.markdown(
+            "Could the platform quote a shorter promise at the same on-time share, or a safer promise at "
+            "the same length? A quantile model predicts the delivery time an order will stay within "
+            "with probability alpha; the promise is that value rounded up to whole days."
+        )
+        fr = pd.DataFrame(te["frontier"])
+        sh = pd.DataFrame(te["shift_baseline"])
+        fig = go.Figure()
+        fig.add_scatter(
+            x=fr["mean_promise_days"],
+            y=fr["coverage"] * 100,
+            mode="lines+markers",
+            name="Quantile model",
+            text=[f"alpha {a}" for a in fr["alpha"]],
+            hoverinfo="text+x+y",
+        )
+        fig.add_scatter(
+            x=sh["mean_promise_days"],
+            y=sh["coverage"] * 100,
+            mode="lines+markers",
+            name="Olist promise + constant days",
+            line=dict(dash="dash"),
+        )
+        o = te["olist"]
+        fig.add_scatter(
+            x=[o["mean_promise_days"]],
+            y=[o["coverage"] * 100],
+            mode="markers",
+            name="Olist as quoted",
+            marker=dict(size=14, symbol="diamond"),
+        )
+        fig.update_layout(
+            xaxis_title="Average promise length (days from approval)",
+            yaxis_title="Delivered on or before the promise (%)",
+            title="Promise length vs on-time share (test months)",
+            height=430,
+            margin=dict(l=10, r=10, t=50, b=10),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        ch = te["chosen"]["match_olist"]
+        v = ch["vs_olist"]
+        a, b, d = st.columns(3)
+        a.metric("Level chosen on validation", f"alpha {ch['alpha']}")
+        b.metric(
+            "Promise length vs Olist",
+            f"{v['length_diff']:+.1f} days",
+            f"95% CI {v['length_diff_ci'][0]:+.1f} to {v['length_diff_ci'][1]:+.1f}",
+            delta_color="off",
+        )
+        d.metric(
+            "On-time share vs Olist",
+            f"{v['coverage_diff'] * 100:+.1f} pp",
+            f"95% CI {v['coverage_diff_ci'][0] * 100:+.1f} to {v['coverage_diff_ci'][1] * 100:+.1f}",
+            delta_color="off",
+        )
+        ip = te["interpolated_same_level"]
+        c.caption(
+            f"Read off the frontier (descriptive): at Olist's own on-time share the model's promise would "
+            f"average {ip['length_at_olist_test_coverage']:.1f} days vs {o['mean_promise_days']:.1f}. "
+            "Validation picked the level, so this is not tuned on test."
+        )
+        c.callout(
+            "<b>Read with care.</b> "
+            + eta["disclosure"]
+            + " Customers who see shorter promises may order "
+            "more or complain less; none of that is modelled. High levels (alpha above 0.95) rest on few late "
+            "examples and add length quickly for little extra safety.",
+            kind="warn",
+        )

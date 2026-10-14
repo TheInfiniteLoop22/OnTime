@@ -65,7 +65,10 @@ Reporting"._
 - **Time to act:** handover happens a median 1.2 days after approval; late orders have
   a median 10 days left before the promised date.
 - **Caveat:** the test months were already seen once for stage 1; stage 2 is a separate, pre-declared
-  model on the same months and needs fresh data for confirmation. Ranking only (no calibration).
+  model on the same months and needs fresh data for confirmation.
+- **Calibration:** isotonic calibrator fitted on validation only. Test Brier 0.1390 raw ->
+  0.0348 calibrated (stage 1: 0.0435; constant at the true rate: 0.0434); ECE
+  0.290 -> 0.022. Base rates move between periods: use rank and bands.
 
 | Month | Late rate | ROC-AUC at approval | ROC-AUC at handover | Lift@10% at approval | Lift@10% at handover |
 |---|---|---|---|---|---|
@@ -73,6 +76,22 @@ Reporting"._
 | 2018-06 | 1.2% | 0.78 | 0.80 | 3.78 | 5.26 |
 | 2018-07 | 3.2% | 0.64 | 0.82 | 2.82 | 4.79 |
 | 2018-08 | 7.5% | 0.57 | 0.85 | 1.29 | 4.95 |
+
+## 4c. Promise-date model (S1)
+- **What it is:** LightGBM quantile regression of whole-day delivery time from approval-time features;
+  the promise is the quantile rounded up. Lateness uses the dataset's own date rule (asserted exact).
+- **Selection:** level chosen on validation to match Olist's validation on-time share (92.4% ->
+  level 0.88). Test months are a third look: development evidence.
+- **Test result:** average promise 20.6 days vs 22.0 for Olist
+  (-1.4 [-1.4, -1.3]), on-time 96.7% vs 95.5% (+1.2 pp [1.0, 1.4]).
+- **Not modelled:** customer demand response to promise length; a shorter promise is not free.
+
+| Operating point (chosen on validation) | Level | Avg promise (days) | On time | vs Olist length | vs Olist on-time |
+|---|---|---|---|---|---|
+| Olist as quoted | - | 22.0 | 95.5% | - | - |
+| model, match olist | 0.88 | 20.6 | 96.7% | -1.4 d [-1.4, -1.3] | +1.2 pp [1.0, 1.4] |
+| model, cov 0.95 | 0.93 | 26.5 | 98.7% | +4.5 d [4.4, 4.6] | +3.2 pp [3.0, 3.5] |
+| model, cov 0.97 | 0.97 | 36.1 | 99.6% | +14.1 d [14.0, 14.2] | +4.1 pp [3.9, 4.4] |
 
 ## 5. Calibration
 | Model | Calibrator | Brier (deployed) | Brier (monthly recalibration) | ECE (deployed) |

@@ -58,9 +58,23 @@ Reporting"._
 - **Time to act:** handover happens a median {{s2_handover_median_days}} days after approval; late orders have
   a median {{s2_window_median_days}} days left before the promised date.
 - **Caveat:** the test months were already seen once for stage 1; stage 2 is a separate, pre-declared
-  model on the same months and needs fresh data for confirmation. Ranking only (no calibration).
+  model on the same months and needs fresh data for confirmation.
+- **Calibration:** {{s2_cal_method}} calibrator fitted on validation only. Test Brier {{s2_cal_brier_raw}} raw ->
+  {{s2_cal_brier}} calibrated (stage 1: {{s2_cal_brier_s1}}; constant at the true rate: {{s2_const_brier}}); ECE
+  {{s2_cal_ece_raw}} -> {{s2_cal_ece}}. Base rates move between periods: use rank and bands.
 
 {{s2_monthly_table}}
+
+## 4c. Promise-date model (S1)
+- **What it is:** LightGBM quantile regression of whole-day delivery time from approval-time features;
+  the promise is the quantile rounded up. Lateness uses the dataset's own date rule (asserted exact).
+- **Selection:** level chosen on validation to match Olist's validation on-time share ({{eta_val_cov}} ->
+  level {{eta_alpha}}). Test months are a third look: development evidence.
+- **Test result:** average promise {{eta_model_len}} days vs {{eta_olist_len}} for Olist
+  ({{eta_len_diff}} {{eta_len_ci}}), on-time {{eta_model_cov}} vs {{eta_olist_cov}} ({{eta_cov_diff}} pp {{eta_cov_ci}}).
+- **Not modelled:** customer demand response to promise length; a shorter promise is not free.
+
+{{eta_table}}
 
 ## 5. Calibration
 {{calibration_text}}

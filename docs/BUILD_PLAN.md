@@ -115,11 +115,11 @@ Optionally deploy the app on Streamlit Community Cloud using a small precomputed
 understand the project from the README alone.
 
 ## Stretch phases (optional)
-- **S1 Quantile ETA:** LightGBM quantile objective (α = 0.5, 0.9) for delivery_days; compare
+- **S1 (DONE - Phase 12) Quantile ETA:** LightGBM quantile objective (α = 0.5, 0.9) for delivery_days; compare
   promise coverage and average promise length vs Olist's estimate ("could we promise shorter
   dates on safe routes and longer on risky ones?").
 - **S2 Drift monitoring (DONE - Phase 11):** PSI per feature by month + rolling PR-AUC chart, as an app page.
-- **S3 Serving:** FastAPI `/score` returning probability + reason codes; Dockerfile.
+- **S3 (DONE - Phase 12) Serving:** FastAPI `/score` returning probability + reason codes; Dockerfile.
 
 ---
 
@@ -134,4 +134,4 @@ understand the project from the README alone.
 ## Phase 11 (added): making it stronger
 Monitoring (S2), rolling retraining study, Stage 2 handover model, deployment bundle. Outcomes and
 caveats are in `docs/PHASE_LOG.md` (Phase 11) and `docs/DECISIONS_LOG.md` (D-079..D-086).
-S1 (quantile ETA) and S3 (FastAPI + Docker) remain open.
+S1 (quantile ETA) and S3 (FastAPI + Docker) were completed in Phase 12 (D-087..D-094).
