@@ -95,6 +95,13 @@ def stage_rolling() -> None:
     run_rolling()
 
 
+def stage_stage2() -> None:
+    """Stage-2 model: re-score each order at carrier handover (validation-selected, test once)."""
+    from ontime.stage2.run import run_stage2
+
+    run_stage2()
+
+
 def stage_report() -> None:
     """Generate README.md and reports/model_card.md from the result files."""
     from ontime.reporting.render import build_reports
@@ -110,6 +117,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "stage2": stage_stage2,
     "rolling": stage_rolling,
     "monitor": stage_monitor,
     "report": stage_report,
