@@ -1,0 +1,64 @@
+{
+  "reference": "training period",
+  "thresholds": {
+    "watch": 0.1,
+    "alert": 0.25
+  },
+  "months_monitored": [
+    "2018-02-01",
+    "2018-03-01",
+    "2018-04-01",
+    "2018-05-01",
+    "2018-06-01",
+    "2018-07-01",
+    "2018-08-01"
+  ],
+  "latest_month": "2018-08-01",
+  "latest_status": "alert",
+  "top_drifting_features_test_period": {
+    "promise_per_1000km": 0.8013928810814694,
+    "handling_window_days": 0.7983958310300475,
+    "promised_days": 0.5934117973410068,
+    "approval_lag_hours": 0.3489548655262788,
+    "total_freight": 0.32876383128248304,
+    "category_group": 0.07876685668467028,
+    "approve_hour": 0.04270950989701793,
+    "max_item_weight_kg": 0.033878630532518016
+  },
+  "n_features_alert_latest_trailing": 3,
+  "n_features_alert_latest_vs_training": 4,
+  "expected_drift_features": [
+    "approve_month",
+    "days_to_next_holiday",
+    "holidays_in_promise_window",
+    "is_black_friday_window",
+    "seller_n_past",
+    "seller_days_since_first_order",
+    "global_late_rate_30d",
+    "customer_state_late_rate_shrunk",
+    "route_late_rate_shrunk",
+    "seller_late_rate_shrunk",
+    "seller_late_rate_90d_shrunk",
+    "seller_load_7d"
+  ],
+  "spearman_trailing_max_psi_vs_roc_auc": -0.7142857142857144,
+  "n_months_in_correlation": 7,
+  "test_months_status": [
+    {
+      "month": "2018-05",
+      "status": "watch"
+    },
+    {
+      "month": "2018-06",
+      "status": "alert"
+    },
+    {
+      "month": "2018-07",
+      "status": "alert"
+    },
+    {
+      "month": "2018-08",
+      "status": "alert"
+    }
+  ]
+}

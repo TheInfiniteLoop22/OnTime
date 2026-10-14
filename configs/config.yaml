@@ -1,0 +1,133 @@
+# OnTime configuration. Every path/parameter used by code comes from here.
+# Values marked PROVISIONAL are finalized after EDA (Phase 3).
+
+seed: 42
+
+paths:
+  raw_dir: data/raw
+  interim_dir: data/interim
+  processed_dir: data/processed
+  models_dir: models
+  reports_dir: reports
+  figures_dir: reports/figures
+  orders_parquet: data/interim/orders.parquet
+  # Every approved order with a seller (any status). Used ONLY for "known at t0" load features,
+  # so whether an order was later delivered cannot influence the feature.
+  order_universe_parquet: data/interim/order_universe.parquet
+  features_parquet: data/processed/features.parquet
+
+kaggle:
+  dataset: olistbr/brazilian-ecommerce
+
+# Raw CSV file names expected in raw_dir (as shipped by Kaggle)
+raw_files:
+  orders: olist_orders_dataset.csv
+  order_items: olist_order_items_dataset.csv
+  products: olist_products_dataset.csv
+  sellers: olist_sellers_dataset.csv
+  customers: olist_customers_dataset.csv
+  geolocation: olist_geolocation_dataset.csv
+  payments: olist_order_payments_dataset.csv
+  reviews: olist_order_reviews_dataset.csv
+  category_translation: product_category_name_translation.csv
+
+# Time-based splits on order_approved_at. FINALIZED in Phase 3:
+# keeps >1,000 late orders in test for stable PR-AUC intervals.
+splits:
+  train_end: "2018-01-31"
+  val_start: "2018-02-01"
+  val_end: "2018-04-30"
+  test_start: "2018-05-01"
+  # Orders approved on/after this are dropped (right-censoring: only fast deliveries observed).
+  # Chosen from the weekly diagnostic in reports/data_quality.md (Phase 2).
+  censoring_cutoff: "2018-08-20"
+
+# Brazil bounding box used to drop bad geolocation points
+geo:
+  lat_min: -34.0
+  lat_max: 6.0
+  lng_min: -74.0
+  lng_max: -34.0
+
+features:
+  shrinkage_alpha: 20          # pseudo-count for Bayesian shrinkage of late rates
+  recent_window_days: 90
+  load_window_days: 7
+  global_window_days: 30
+  black_friday_window_days: 3  # +/- days around Black Friday
+  black_friday_dates: ["2016-11-25", "2017-11-24", "2018-11-23"]
+  # English product category -> ~13 groups (anything unmapped -> "other"; missing -> "unknown").
+  # Grouping stops the model memorising tiny categories (the rarest have < 50 orders).
+  category_groups:
+    home_furnishing: [bed_bath_table, furniture_decor, housewares, home_confort, home_comfort_2,
+      furniture_living_room, furniture_bedroom, furniture_mattress_and_upholstery,
+      kitchen_dining_laundry_garden_furniture, la_cuisine, office_furniture]
+    health_beauty: [health_beauty, perfumery, diapers_and_hygiene]
+    sports_leisure: [sports_leisure]
+    computers_electronics: [computers_accessories, computers, electronics, tablets_printing_image,
+      audio, pc_gamer, consoles_games]
+    telephony: [telephony, fixed_telephony]
+    appliances: [home_appliances, home_appliances_2, small_appliances,
+      small_appliances_home_oven_and_coffee, air_conditioning,
+      portateis_cozinha_e_preparadores_de_alimentos]
+    fashion_accessories: [fashion_bags_accessories, fashion_shoes, fashion_underwear_beach,
+      fashion_male_clothing, fashio_female_clothing, fashion_sport, fashion_childrens_clothes,
+      luggage_accessories, watches_gifts]
+    toys_baby: [toys, baby]
+    auto: [auto]
+    garden_construction: [garden_tools, home_construction, construction_tools_construction,
+      construction_tools_lights, construction_tools_safety, costruction_tools_garden,
+      costruction_tools_tools]
+    gifts_stationery_arts: [cool_stuff, stationery, art, arts_and_craftmanship, party_supplies,
+      christmas_supplies, flowers]
+    media_music: [books_general_interest, books_technical, books_imported, cds_dvds_musicals,
+      dvds_blu_ray, music, cine_photo, musical_instruments]
+    food_pets: [food, drinks, food_drink, pet_shop]
+
+monitoring:
+  psi_bins: 10
+  psi_watch: 0.10    # PSI 0.10-0.25 = moderate shift
+  psi_alert: 0.25    # PSI above this = major shift
+  min_month_orders: 500
+  trailing_months: 3   # 'sudden change' reference = the previous N months
+  # Features that are time-indexed or system STATE by construction. They move every month on
+  # purpose (the model uses them to adapt), so PSI on them is an expected, non-alerting signal;
+  # their level is tracked instead. Alerts are driven by order-intrinsic features + performance.
+  expected_drift_features: [approve_month, days_to_next_holiday, holidays_in_promise_window,
+    is_black_friday_window, seller_n_past, seller_days_since_first_order, global_late_rate_30d,
+    customer_state_late_rate_shrunk, route_late_rate_shrunk, seller_late_rate_shrunk,
+    seller_late_rate_90d_shrunk, seller_load_7d]
+
+rolling:                      # v2 study: monthly retraining backtest
+  first_month: "2018-02-01"
+  last_month: "2018-08-01"
+  min_train_orders: 5000
+  inner_validation_days: 45    # LR's C is chosen on the last 45 days BEFORE the month starts
+  c_grid: [0.01, 0.1, 1.0, 10.0, 50.0]
+  proxy_features: [approve_month, days_to_next_holiday, holidays_in_promise_window,
+    is_black_friday_window]    # calendar features that mostly encode "which part of the year"
+  lgbm:                        # generic defaults, deliberately NOT the v1-tuned values
+    num_leaves: 31
+    learning_rate: 0.05
+    min_child_samples: 100
+    colsample_bytree: 0.7
+    subsample: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    class_weight: none
+
+policy:
+  capacity_grid: [0.05, 0.10, 0.20]          # fraction of daily orders ops can act on
+  intervention_success_grid: [0.1, 0.2, 0.3, 0.5]  # ASSUMED prob. an intervention prevents lateness
+
+tuning:
+  optuna_trials: 50            # LightGBM
+  optuna_trials_logreg: 25
+  optuna_trials_ebm: 12
+  bootstrap_resamples: 1000
+  # Validation is split BY TIME so tuning and calibration never share rows:
+  #   validation 2018-02-01..04-30 = [ val_tune | val_calib = (calib_fit | calib_eval) ]
+  val_tune_end: "2018-03-15"   # tune hyperparameters / early-stop on <= this date
+  calib_fit_end: "2018-04-07"  # fit calibrators on val_calib <= this, score the rest
+  ebm_early_stop_fraction: 0.15  # latest 15% of TRAIN (by time) used for EBM early stopping
+  lgbm_early_stopping_rounds: 100

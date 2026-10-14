@@ -1,0 +1,365 @@
+{
+  "disclosure": "Third look at the test months (after stage 1 and stage 2); levels chosen on validation only. Development evidence, not a first-look hold-out.",
+  "definition": "Y = date(delivered) - date(approved) in whole days; promise = ceil(q_alpha); late <=> Y > promise (matches Olist is_late).",
+  "lateness_definition_mismatch": 0.0,
+  "orders": {
+    "train": 50603,
+    "val_tune": 10057,
+    "val_calib": 10184,
+    "test": 24093
+  },
+  "validation": {
+    "olist": {
+      "coverage": 0.9241948153967007,
+      "mean_promise_days": 23.021602513747055
+    },
+    "grid": {
+      "0.5": {
+        "coverage": 0.7019835035349568,
+        "mean_promise_days": 12.737922230950511,
+        "pinball": 2.6329656016834764,
+        "best_iteration": 290
+      },
+      "0.7": {
+        "coverage": 0.8238413197172034,
+        "mean_promise_days": 16.31785153181461,
+        "pinball": 2.6982972606757607,
+        "best_iteration": 156
+      },
+      "0.8": {
+        "coverage": 0.8763747054202671,
+        "mean_promise_days": 18.779654359780046,
+        "pinball": 2.3935652686028237,
+        "best_iteration": 121
+      },
+      "0.82": {
+        "coverage": 0.8935585231736056,
+        "mean_promise_days": 19.69039670070699,
+        "pinball": 2.3062331638813958,
+        "best_iteration": 150
+      },
+      "0.84": {
+        "coverage": 0.9103495679497251,
+        "mean_promise_days": 21.26512175962294,
+        "pinball": 2.281649977885758,
+        "best_iteration": 195
+      },
+      "0.86": {
+        "coverage": 0.9186959937156324,
+        "mean_promise_days": 21.640907305577375,
+        "pinball": 2.086677728104863,
+        "best_iteration": 208
+      },
+      "0.88": {
+        "coverage": 0.9327376276512176,
+        "mean_promise_days": 23.44098586017282,
+        "pinball": 2.0159794176144405,
+        "best_iteration": 125
+      },
+      "0.9": {
+        "coverage": 0.94344069128044,
+        "mean_promise_days": 25.42252553024352,
+        "pinball": 1.8853733705257834,
+        "best_iteration": 150
+      },
+      "0.93": {
+        "coverage": 0.9593479968578161,
+        "mean_promise_days": 29.18421052631579,
+        "pinball": 1.6069376392003518,
+        "best_iteration": 61
+      },
+      "0.95": {
+        "coverage": 0.9687745483110762,
+        "mean_promise_days": 32.076492537313435,
+        "pinball": 1.3152914280764605,
+        "best_iteration": 75
+      },
+      "0.97": {
+        "coverage": 0.9799685781618225,
+        "mean_promise_days": 37.18774548311076,
+        "pinball": 0.9524865110505176,
+        "best_iteration": 30
+      },
+      "0.98": {
+        "coverage": 0.986351139041634,
+        "mean_promise_days": 40.99823252160251,
+        "pinball": 0.721391519505592,
+        "best_iteration": 24
+      },
+      "0.99": {
+        "coverage": 0.9938138256087982,
+        "mean_promise_days": 47.91084053417125,
+        "pinball": 0.432633294473983,
+        "best_iteration": 17
+      }
+    }
+  },
+  "test": {
+    "olist": {
+      "coverage": 0.9545096086000083,
+      "mean_promise_days": 22.00361100734653
+    },
+    "frontier": [
+      {
+        "alpha": 0.5,
+        "coverage": 0.8164197069688292,
+        "mean_promise_days": 12.072884240235753,
+        "pinball": 2.4429156776283056
+      },
+      {
+        "alpha": 0.7,
+        "coverage": 0.8977711368447266,
+        "mean_promise_days": 15.200016602332628,
+        "pinball": 2.3747231380201033
+      },
+      {
+        "alpha": 0.8,
+        "coverage": 0.9352509027518366,
+        "mean_promise_days": 17.54152658448512,
+        "pinball": 2.063856500117866
+      },
+      {
+        "alpha": 0.82,
+        "coverage": 0.9456688664757399,
+        "mean_promise_days": 18.236624745776783,
+        "pinball": 1.9765742419980619
+      },
+      {
+        "alpha": 0.84,
+        "coverage": 0.9561283360312124,
+        "mean_promise_days": 19.302452994645748,
+        "pinball": 1.9057972536823913
+      },
+      {
+        "alpha": 0.86,
+        "coverage": 0.9594488025567592,
+        "mean_promise_days": 19.53036151579297,
+        "pinball": 1.719821208317601
+      },
+      {
+        "alpha": 0.88,
+        "coverage": 0.9665878055866849,
+        "mean_promise_days": 20.64969078155481,
+        "pinball": 1.6049658702964156
+      },
+      {
+        "alpha": 0.9,
+        "coverage": 0.9768812518158801,
+        "mean_promise_days": 22.825467978250945,
+        "pinball": 1.5286005577225998
+      },
+      {
+        "alpha": 0.93,
+        "coverage": 0.98688415722409,
+        "mean_promise_days": 26.5059560868302,
+        "pinball": 1.317738081324816
+      },
+      {
+        "alpha": 0.95,
+        "coverage": 0.9906196820653301,
+        "mean_promise_days": 29.21790561573901,
+        "pinball": 1.0877880782448563
+      },
+      {
+        "alpha": 0.97,
+        "coverage": 0.9958909226746357,
+        "mean_promise_days": 36.11638235172042,
+        "pinball": 0.8578408277725799
+      },
+      {
+        "alpha": 0.98,
+        "coverage": 0.9973021209479932,
+        "mean_promise_days": 40.63885775951521,
+        "pinball": 0.6689591812646073
+      },
+      {
+        "alpha": 0.99,
+        "coverage": 0.9982152492425186,
+        "mean_promise_days": 48.21989789565434,
+        "pinball": 0.41646197415455527
+      }
+    ],
+    "shift_baseline": [
+      {
+        "shift_days": 0,
+        "coverage": 0.9545096086000083,
+        "mean_promise_days": 22.00361100734653
+      },
+      {
+        "shift_days": 1,
+        "coverage": 0.9626862574191674,
+        "mean_promise_days": 23.00361100734653
+      },
+      {
+        "shift_days": 2,
+        "coverage": 0.9675009338812103,
+        "mean_promise_days": 24.00361100734653
+      },
+      {
+        "shift_days": 3,
+        "coverage": 0.9725231395010999,
+        "mean_promise_days": 25.00361100734653
+      },
+      {
+        "shift_days": 4,
+        "coverage": 0.9767567343211722,
+        "mean_promise_days": 26.00361100734653
+      },
+      {
+        "shift_days": 5,
+        "coverage": 0.9803677416677044,
+        "mean_promise_days": 27.00361100734653
+      },
+      {
+        "shift_days": 6,
+        "coverage": 0.9833146557091271,
+        "mean_promise_days": 28.00361100734653
+      },
+      {
+        "shift_days": 7,
+        "coverage": 0.9872992155397834,
+        "mean_promise_days": 29.00361100734653
+      },
+      {
+        "shift_days": 8,
+        "coverage": 0.9899555887602208,
+        "mean_promise_days": 30.00361100734653
+      }
+    ],
+    "olist_pinball_by_alpha": {
+      "0.5": 6.782550948408251,
+      "0.7": 4.195509069024198,
+      "0.8": 2.901988129332171,
+      "0.82": 2.6432839413937663,
+      "0.84": 2.3845797534553608,
+      "0.86": 2.1258755655169552,
+      "0.88": 1.8671713775785497,
+      "0.9": 1.6084671896401443,
+      "0.93": 1.2204109077325358,
+      "0.95": 0.9617067197941316,
+      "0.97": 0.7030025318557261,
+      "0.98": 0.5736504378865234,
+      "0.99": 0.44429834391732054
+    },
+    "interpolated_same_level": {
+      "length_at_olist_test_coverage": 19.137503384701745,
+      "coverage_at_olist_test_length": 0.9729931052947475
+    },
+    "chosen": {
+      "match_olist": {
+        "alpha": 0.88,
+        "target_validation_coverage": 0.9241948153967007,
+        "test_coverage": 0.9665878055866849,
+        "test_mean_promise_days": 20.64969078155481,
+        "vs_olist": {
+          "length_diff": -1.3539202257917238,
+          "length_diff_ci": [
+            -1.4354086249118,
+            -1.2724805960237413
+          ],
+          "coverage_diff": 0.012078196986676629,
+          "coverage_diff_ci": [
+            0.009878387913501848,
+            0.014153488565143403
+          ]
+        },
+        "shift_baseline": {
+          "shift_days": 0,
+          "test_coverage": 0.9545096086000083,
+          "test_mean_promise_days": 22.00361100734653
+        }
+      },
+      "cov_0.95": {
+        "alpha": 0.93,
+        "target_validation_coverage": 0.95,
+        "test_coverage": 0.98688415722409,
+        "test_mean_promise_days": 26.5059560868302,
+        "vs_olist": {
+          "length_diff": 4.502345079483668,
+          "length_diff_ci": [
+            4.40364109907442,
+            4.597342589133773
+          ],
+          "coverage_diff": 0.032374548624081685,
+          "coverage_diff_ci": [
+            0.03017370190511767,
+            0.0346999128377537
+          ]
+        },
+        "shift_baseline": {
+          "shift_days": 4,
+          "test_coverage": 0.9767567343211722,
+          "test_mean_promise_days": 26.00361100734653
+        }
+      },
+      "cov_0.97": {
+        "alpha": 0.97,
+        "target_validation_coverage": 0.97,
+        "test_coverage": 0.9958909226746357,
+        "test_mean_promise_days": 36.11638235172042,
+        "vs_olist": {
+          "length_diff": 14.112771344373884,
+          "length_diff_ci": [
+            14.00791827501764,
+            14.224155356327563
+          ],
+          "coverage_diff": 0.04138131407462749,
+          "coverage_diff_ci": [
+            0.038890964180467356,
+            0.04383119578300751
+          ]
+        }
+      }
+    }
+  },
+  "features": [
+    "distance_km",
+    "log_distance_km",
+    "same_state",
+    "customer_region",
+    "seller_region",
+    "geo_imputed",
+    "n_distinct_sellers",
+    "promised_days",
+    "approval_lag_hours",
+    "handling_window_days",
+    "promise_per_1000km",
+    "approve_dow",
+    "approve_hour",
+    "approve_month",
+    "is_weekend_approval",
+    "days_to_next_holiday",
+    "holidays_in_promise_window",
+    "is_black_friday_window",
+    "n_items",
+    "total_price",
+    "total_freight",
+    "freight_ratio",
+    "total_weight_kg",
+    "total_volume_l",
+    "max_item_weight_kg",
+    "category_group",
+    "product_photos_qty_mean",
+    "payment_type",
+    "payment_installments_max",
+    "seller_n_past",
+    "seller_late_rate_shrunk",
+    "seller_late_rate_90d_shrunk",
+    "route_late_rate_shrunk",
+    "customer_state_late_rate_shrunk",
+    "seller_load_7d",
+    "seller_days_since_first_order",
+    "global_late_rate_30d"
+  ],
+  "params": {
+    "n_estimators": 800,
+    "learning_rate": 0.05,
+    "num_leaves": 31,
+    "min_child_samples": 100,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "verbose": -1
+  }
+}

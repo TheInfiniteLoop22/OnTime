@@ -1,0 +1,114 @@
+# Reason-code wording: ONE place, reviewable by non-engineers.
+#
+# How it works (FEATURE_SPEC section 7):
+#   1. A model gives, per order, a contribution (in log-odds) for every feature.
+#   2. Related features are SUMMED into one "group" so the same reason is not shown twice.
+#   3. Groups with the largest positive contributions become "adds risk" reasons (top 3);
+#      the most negative become "reduces risk" reasons (top 2); tiny effects are dropped.
+#   4. Each reason is rendered as:  <fact sentence from `text`> (adds risk | reduces risk)
+#
+# WORDING RULE (learned in Phase 8): sentences state FACTS about the order and let the
+# (adds risk / reduces risk) suffix, which comes from the model's contribution, carry the
+# verdict. Judgement words such as "tight", "weak", "elevated" are avoided because a model's
+# learned direction for a feature can differ from intuition (e.g. the 30-day network late rate),
+# and a sentence that contradicts its own number would destroy trust.
+#
+# Placeholders are feature names (see FEATURE_COLUMNS) plus derived display fields:
+#   weekday_name, month_name, customer_region_name, seller_region_name, category_name, route_phrase,
+#   bf_phrase, geo_status
+
+min_abs_contribution: 0.05   # log-odds; groups below this are not shown as reasons
+n_positive: 3
+n_negative: 2
+
+groups:
+  distance:
+    features: [distance_km, log_distance_km, promise_per_1000km]
+    text: "Seller-to-customer distance is {distance_km:,.0f} km"
+
+  promise_window:
+    features: [promised_days, handling_window_days]
+    text: "Delivery promise is {promised_days:.1f} days, with {handling_window_days:.1f} days for the seller to hand over"
+
+  destination_region:
+    features: [customer_region]
+    text: "Delivery is to the {customer_region_name} region"
+
+  origin_region:
+    features: [seller_region]
+    text: "Shipment starts in the {seller_region_name} region"
+
+  same_state:
+    features: [same_state]
+    text: "Seller and customer are {route_phrase}"
+
+  route_history:
+    features: [route_late_rate_shrunk, customer_state_late_rate_shrunk]
+    text: "On this seller-state to customer-state route, about {route_late_rate_shrunk:.0%} of earlier orders arrived late"
+
+  seller_record:
+    features: [seller_n_past, seller_late_rate_shrunk, seller_late_rate_90d_shrunk, seller_days_since_first_order]
+    text: "Seller's record: an estimated {seller_late_rate_90d_shrunk:.0%} late over the last 90 days, {seller_n_past:.0f} completed orders so far"
+
+  seller_load:
+    features: [seller_load_7d]
+    text: "Seller received {seller_load_7d:.0f} orders in the last 7 days"
+
+  network_delays:
+    features: [global_late_rate_30d]
+    text: "Network-wide, {global_late_rate_30d:.0%} of deliveries in the last 30 days were late"
+
+  calendar_peak:
+    features: [is_black_friday_window, holidays_in_promise_window, days_to_next_holiday]
+    text: "Next public holiday is {days_to_next_holiday:.0f} day(s) after approval and {holidays_in_promise_window:.0f} fall in the delivery window{bf_phrase}"
+
+  approval_timing:
+    features: [approve_dow, approve_hour, approve_month, is_weekend_approval, approval_lag_hours]
+    text: "Order approved on a {weekday_name} in {month_name} at {approve_hour:.0f}:00, {approval_lag_hours:.0f} h after purchase"
+
+  order_size:
+    features: [n_items, total_weight_kg, total_volume_l, max_item_weight_kg]
+    text: "Shipment has {n_items:.0f} item(s), {total_weight_kg:.1f} kg, {total_volume_l:.0f} litres"
+
+  price_freight:
+    features: [total_price, total_freight, freight_ratio]
+    text: "Goods cost R$ {total_price:,.0f} and freight is R$ {total_freight:,.0f}"
+
+  category:
+    features: [category_group, product_photos_qty_mean]
+    text: "Product category is {category_name}"
+
+  payment:
+    features: [payment_type, payment_installments_max]
+    text: "Paid by {payment_type} in up to {payment_installments_max:.0f} instalment(s)"
+
+  multi_seller:
+    features: [n_distinct_sellers]
+    text: "Order ships from {n_distinct_sellers:.0f} seller(s)"
+
+  geo_quality:
+    features: [geo_imputed]
+    text: "Location lookup was {geo_status}"
+
+# ---------------------------------------------------------------------------------------------
+# Stage 2 (re-scored at carrier handover). These groups are used ONLY by the stage-2 model, in
+# addition to every group above (stage-2 contributions also cover the approval-time features).
+# Facts only, as above. "days_to_handover" is days from approval to handover; a negative
+# handover_vs_limit_days means the seller handed over before the shipping-limit date.
+# ---------------------------------------------------------------------------------------------
+stage2_groups:
+  handover_timing:
+    features: [days_to_handover, handover_vs_limit_days]
+    text: "Seller handed the parcel to the carrier {days_to_handover:.1f} days after approval ({handover_vs_limit_days:+.1f} days vs the shipping-limit date)"
+
+  time_left:
+    features: [promise_left_at_handover_days]
+    text: "{promise_left_at_handover_days:.1f} days remain before the promised date at handover"
+
+  seller_handover_history:
+    features: [seller_late_handover_rate_30d]
+    text: "Seller's recent late-handover rate is {seller_late_handover_rate_30d:.0%}"
+
+  destination_backlog:
+    features: [dest_backlog_share]
+    text: "{dest_backlog_share:.0%} of recent shipments to this state are still in transit"

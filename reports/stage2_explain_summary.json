@@ -1,0 +1,29 @@
+{
+  "orders": 24093,
+  "model": "lightgbm",
+  "max_additive_identity_error": 1.5987211554602254e-14,
+  "mean_abs_group_contribution": {
+    "route_history": 0.4540654901195208,
+    "time_left": 0.34585046195661334,
+    "destination_backlog": 0.3296925518908411,
+    "distance": 0.2712286228212466,
+    "handover_timing": 0.22061004736894332,
+    "approval_timing": 0.19133626374225496,
+    "calendar_peak": 0.18266144922926936,
+    "promise_window": 0.15057611211483898,
+    "seller_record": 0.11346899206708527,
+    "network_delays": 0.10308809785572065,
+    "order_size": 0.10197514626446849,
+    "category": 0.0946412883911771,
+    "same_state": 0.07465834792800123,
+    "price_freight": 0.07141258908896755,
+    "destination_region": 0.05416458725409863,
+    "seller_handover_history": 0.03346791798293478,
+    "origin_region": 0.03178602500607811,
+    "seller_load": 0.028286013269119614,
+    "multi_seller": 0.015397770758258192,
+    "payment": 0.008706656750377085,
+    "geo_quality": 0.00125045195702616
+  },
+  "orders_with_a_stage2_reason": 0.6203461586352883
+}

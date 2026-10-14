@@ -1,0 +1,187 @@
+{
+  "framing": "Adjusted ASSOCIATION between lateness and review score; not a randomized causal effect.",
+  "population": {
+    "orders_with_review": 94296,
+    "late_orders": 6352,
+    "late_rate": 0.06736234834987698,
+    "late_rate_ci95": [
+      0.06578010495033765,
+      0.06897984015911424
+    ]
+  },
+  "descriptive": {
+    "on time": {
+      "orders": 87944,
+      "mean_score": 4.2875,
+      "median_score": 5.0,
+      "share_1_star": 0.0664,
+      "share_1_or_2_star": 0.0932,
+      "share_5_star": 0.6213
+    },
+    "late": {
+      "orders": 6352,
+      "mean_score": 2.2642,
+      "median_score": 1.0,
+      "share_1_star": 0.5397,
+      "share_1_or_2_star": 0.6263,
+      "share_5_star": 0.1644
+    }
+  },
+  "mann_whitney": {
+    "u_statistic": 100885914.0,
+    "p_value": 0.0,
+    "prob_late_scores_higher_than_ontime": 0.18059837096356945,
+    "prob_ontime_scores_higher_than_late": 0.8194016290364305,
+    "n_late": 6352,
+    "n_ontime": 87944
+  },
+  "bootstrap": {
+    "mean_score_diff": -2.0232868878546713,
+    "mean_score_diff_ci95": [
+      -2.063935729810085,
+      -1.9849518963407216
+    ],
+    "low_score_share_diff": 0.5331092593615219,
+    "low_score_share_diff_ci95": [
+      0.5224389093437294,
+      0.5456083582127257
+    ],
+    "n_bootstrap": 1000
+  },
+  "ols": {
+    "unadjusted": {
+      "coef": -2.023286887853902,
+      "ci95": [
+        -2.070491200393739,
+        -1.9760825753140652
+      ],
+      "p_value": 0.0,
+      "n": 94296
+    },
+    "adjusted": {
+      "coef": -1.9677911216443007,
+      "ci95": [
+        -2.016286548649277,
+        -1.9192956946393245
+      ],
+      "p_value": 0.0,
+      "n": 94296,
+      "r_squared": 0.18013548864544437
+    }
+  },
+  "seller_fixed_effects": {
+    "coef": -1.9779876635687481,
+    "ci95": [
+      -2.0281696167120544,
+      -1.9278057104254416
+    ],
+    "p_value": 0.0,
+    "n_orders": 84243,
+    "n_sellers": 1199
+  },
+  "review_timing": [
+    {
+      "group": "on time, reviewed after arrival",
+      "orders": 87764,
+      "share_of_group_orders": 0.998,
+      "mean_score": 4.2881
+    },
+    {
+      "group": "on time, reviewed BEFORE arrival",
+      "orders": 180,
+      "share_of_group_orders": 0.002,
+      "mean_score": 3.9556
+    },
+    {
+      "group": "late, reviewed after arrival",
+      "orders": 1887,
+      "share_of_group_orders": 0.2971,
+      "mean_score": 3.7154
+    },
+    {
+      "group": "late, reviewed BEFORE arrival",
+      "orders": 4465,
+      "share_of_group_orders": 0.7029,
+      "mean_score": 1.6508
+    }
+  ],
+  "sensitivity_answered_after_delivery": {
+    "coef": -0.5515322961066627,
+    "ci95": [
+      -0.6112532896602726,
+      -0.4918113025530527
+    ],
+    "p_value": 3.1544343990403354e-73,
+    "n": 89651,
+    "share_of_reviews_kept": 0.9507402222787817
+  },
+  "ordered_logit": {
+    "log_odds_coef": -2.6862317468537347,
+    "odds_ratio": 0.06813721448662137,
+    "odds_ratio_ci95": [
+      0.06286651145516045,
+      0.07384981114002545
+    ],
+    "p_value": 0.0,
+    "n": 40000,
+    "converged": true
+  },
+  "dose_response": [
+    {
+      "timing": ">=8 days early",
+      "orders": 70249,
+      "mean_score": 4.316,
+      "ci_low": 4.3076,
+      "ci_high": 4.3244,
+      "share_1_or_2_star": 0.0899
+    },
+    {
+      "timing": "1-7 days early",
+      "orders": 16481,
+      "mean_score": 4.1852,
+      "ci_low": 4.1671,
+      "ci_high": 4.2034,
+      "share_1_or_2_star": 0.1048
+    },
+    {
+      "timing": "on the promised day",
+      "orders": 1214,
+      "mean_score": 4.0247,
+      "ci_low": 3.9543,
+      "ci_high": 4.0951,
+      "share_1_or_2_star": 0.1252
+    },
+    {
+      "timing": "1-3 days late",
+      "orders": 1832,
+      "mean_score": 3.2811,
+      "ci_low": 3.2083,
+      "ci_high": 3.3539,
+      "share_1_or_2_star": 0.3242
+    },
+    {
+      "timing": "4-7 days late",
+      "orders": 1742,
+      "mean_score": 2.1039,
+      "ci_low": 2.033,
+      "ci_high": 2.1749,
+      "share_1_or_2_star": 0.6768
+    },
+    {
+      "timing": "8-14 days late",
+      "orders": 1443,
+      "mean_score": 1.6667,
+      "ci_low": 1.6043,
+      "ci_high": 1.7291,
+      "share_1_or_2_star": 0.8032
+    },
+    {
+      "timing": ">14 days late",
+      "orders": 1335,
+      "mean_score": 1.7236,
+      "ci_low": 1.6565,
+      "ci_high": 1.7907,
+      "share_1_or_2_star": 0.7835
+    }
+  ]
+}
