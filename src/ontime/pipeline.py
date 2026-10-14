@@ -13,7 +13,6 @@ from ontime.config import setup_logging
 log = logging.getLogger("ontime.pipeline")
 
 PENDING: dict[str, str] = {
-    "evaluate": "Phase 7",
     "explain": "Phase 8",
 }
 
@@ -70,6 +69,13 @@ def stage_baselines() -> None:
     run_baselines()
 
 
+def stage_evaluate(dry_run: bool = False) -> None:
+    """Final evaluation. Opens the TEST set unless --dry-run (validation, written to dryrun/)."""
+    from ontime.evaluation.run import run_evaluation
+
+    run_evaluation(dry_run=dry_run)
+
+
 def stage_train() -> None:
     """Tune, fit, calibrate and evaluate all models on validation; save to models/."""
     from ontime.models.run import run_training
@@ -78,6 +84,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "evaluate": stage_evaluate,
     "train": stage_train,
     "baselines": stage_baselines,
     "data": stage_data,
@@ -90,9 +97,14 @@ STAGES = {
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ontime.pipeline")
     parser.add_argument("stage", choices=sorted([*STAGES, *PENDING]))
+    parser.add_argument(
+        "--dry-run", action="store_true", help="evaluate: use validation instead of test"
+    )
     args = parser.parse_args(argv)
     setup_logging()
-    if args.stage in STAGES:
+    if args.stage == "evaluate":
+        stage_evaluate(dry_run=args.dry_run)
+    elif args.stage in STAGES:
         STAGES[args.stage]()
     else:
         log.warning("Stage '%s' is not implemented yet (%s).", args.stage, PENDING[args.stage])

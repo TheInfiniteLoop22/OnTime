@@ -63,3 +63,5 @@ pythonpath = ["src"]
 "src/ontime/analysis/*.py" = ["E402"]
 "src/ontime/data/build_orders.py" = ["E402"]
 
+"src/ontime/evaluation/report.py" = ["E501"]
+"src/ontime/evaluation/run.py" = ["E501"]
