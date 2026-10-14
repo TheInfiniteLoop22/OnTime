@@ -45,3 +45,28 @@ New entries are appended at the end of every phase. Numbers cited here come from
 - **Why:** PROJECT_SPEC §5 gives a starting proposal only. Fixing dates before looking at monthly
   volume and delivered-share would be guessing. They are finalized in Phase 2/3 from plots and
   recorded here.
+
+---
+
+### D-007 — Zip prefixes loaded as strings (Phase 1)
+- **Alternatives:** leave as int64 (pandas default).
+- **Why:** they are identifiers; leading zeros (e.g. `01037`) would be lost as ints and joins
+  between customers/sellers/geolocation could silently mismatch.
+
+### D-008 — Pandera schemas are `strict=False` and nullable only where data truly is (Phase 1)
+- **Why:** we validate the columns we depend on without breaking if Kaggle adds extra columns;
+  `lazy=True` reports every violation in one pass. Nulls allowed only for timestamps that are
+  legitimately missing for undelivered orders and for product attributes.
+- **Trade-off:** extra columns are not policed.
+
+### D-009 — Validation failure stops the pipeline but still writes the report (Phase 1)
+- **Why:** the report is the evidence for what went wrong; failing hard prevents building on bad
+  data.
+
+### D-010 — Data-quality report is generated, with a marked section (Phase 1)
+- **Why:** CLAUDE.md rule 5 (no invented numbers). The section is delimited by HTML comment
+  markers so Phase 2 can append the row-count funnel to the same file without overwriting it.
+
+### D-011 — `tabulate` added as a dependency (Phase 1)
+- **Why:** needed for markdown tables from pandas. CLAUDE.md says to ask before heavy
+  dependencies; this is a tiny pure-Python package. Flagged here for transparency.
