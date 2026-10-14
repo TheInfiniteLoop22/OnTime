@@ -28,6 +28,7 @@ pages = [
     st.Page("views/ops_queue.py", title="Ops queue & policy", icon=":material/checklist:"),
     st.Page("views/seller_scorecard.py", title="Seller scorecard", icon=":material/storefront:"),
     st.Page("views/model_insights.py", title="Model insights", icon=":material/insights:"),
+    st.Page("views/drift_monitor.py", title="Drift monitor", icon=":material/monitoring:"),
 ]
 nav = st.navigation(pages)
 

@@ -18,6 +18,7 @@ READY = all(
         project_path("reports/results.json"),
         project_path("reports/impact.json"),
         project_path("reports/test_reason_codes.parquet"),
+        project_path("reports/drift_status.csv"),
         project_path("models/logreg.joblib"),
         project_path("models/ebm.joblib"),
         project_path("models/lightgbm.joblib"),
@@ -25,7 +26,14 @@ READY = all(
 )
 pytestmark = pytest.mark.skipif(not READY, reason="needs pipeline artifacts (make all)")
 
-PAGES = ["overview", "risk_explorer", "ops_queue", "seller_scorecard", "model_insights"]
+PAGES = [
+    "overview",
+    "risk_explorer",
+    "ops_queue",
+    "seller_scorecard",
+    "model_insights",
+    "drift_monitor",
+]
 
 
 @pytest.fixture(scope="module", autouse=True)
