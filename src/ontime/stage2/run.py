@@ -37,6 +37,7 @@ from ontime.evaluation.metrics import (  # noqa: E402
     paired_bootstrap_pr_auc_diff,
     topk_metrics,
 )
+from ontime.evaluation.policy import simulate_policy  # noqa: E402
 from ontime.features.build import FEATURE_COLUMNS  # noqa: E402
 from ontime.models.data import category_levels, prepare_frame  # noqa: E402
 from ontime.models.rolling import paired_day_bootstrap_lift  # noqa: E402
@@ -161,6 +162,9 @@ def run_stage2(write: bool = True) -> dict:
             "stage2_lift_at_10": topk_metrics(g["t1"], yg, p2[i], 0.10, seed)["lift"],
         })  # fmt: skip
 
+    # simulated policy at handover: top-k% of each handover day's orders (assumed success rate p)
+    pol = simulate_policy(dates, y, {"stage2": p2, "stage1": p1}, k_grid,
+                          cfg["policy"]["intervention_success_grid"], seed, n_boot=min(n_boot, 300))  # fmt: skip
     late = test[test["is_late"] == 1]
     window = {
         "late_orders": int(len(late)),
@@ -172,6 +176,36 @@ def run_stage2(write: bool = True) -> dict:
 
     # univariate value of the new signals on validation (development evidence)
     uni = {f: float(roc_auc_score(yva, val[f].fillna(val[f].median()))) for f in STAGE2_FEATURES}
+
+    # ablation on VALIDATION only (logistic regression, fixed C): what does each block add?
+    blocks = {
+        "stage-1 features only": FEATURE_COLUMNS,
+        "+ own handover timing": FEATURE_COLUMNS + STAGE2_FEATURES[:3],
+        "+ seller handover history": FEATURE_COLUMNS + [STAGE2_FEATURES[3]],
+        "+ destination backlog": FEATURE_COLUMNS + [STAGE2_FEATURES[4]],
+        "all stage-2 features": cols,
+    }
+    ablation = {}
+    for name, cs in blocks.items():
+        m = fit_logreg(Xtr, ytr, {"C": best_c, "class_weight": "none"}, seed, cs)
+        pa = m.predict_proba(Xva[cs])[:, 1]
+        ablation[name] = {"pr_auc": float(average_precision_score(yva, pa)),
+                          "roc_auc": float(roc_auc_score(yva, pa))}  # fmt: skip
+
+    # does the backlog identify WHICH order is late, or WHEN/WHERE trouble is? (within state-month AUC)
+    vm = val.assign(m=val["approved_at"].dt.strftime("%Y-%m"))
+    within = []
+    for _, g in vm.groupby(["customer_state", "m"]):
+        if len(g) >= 200 and g["is_late"].sum() >= 15 and g["is_late"].nunique() == 2:
+            within.append(
+                roc_auc_score(
+                    g["is_late"], g["dest_backlog_share"].fillna(g["dest_backlog_share"].median())
+                )
+            )
+    within_state_month = {
+        "groups": len(within),
+        "median_auc": float(np.median(within)) if within else None,
+    }
 
     result = {
         "protocol": "Pre-registered: select by validation PR-AUC, score on test once, same orders as stage 1.",
@@ -188,6 +222,8 @@ def run_stage2(write: bool = True) -> dict:
         "chosen_params": cand[chosen]["params"],
         "validation_comparison": val_cmp,
         "univariate_validation_auc_of_new_features": uni,
+        "ablation_validation_logreg": ablation,
+        "backlog_within_state_month": within_state_month,
         "test": {
             "late_rate": float(y.mean()),
             "stage1": ev1,
@@ -195,6 +231,7 @@ def run_stage2(write: bool = True) -> dict:
             "pr_auc_diff_stage2_minus_stage1": pair,
             "lift_at_10_diff_stage2_minus_stage1": {"diff": lift_d, "ci95": list(lift_ci)},
             "monthly": monthly,
+            "policy": pol.to_dict(orient="records"),
             "action_window_for_late_orders": window,
         },
         "ranking_only": True,

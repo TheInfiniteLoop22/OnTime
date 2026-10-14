@@ -109,3 +109,16 @@ def test_test_split_is_still_locked(pipeline_outputs):
 
     with pytest.raises(PermissionError):
         select_split(pipeline_outputs["features"], "test")
+
+
+def test_stage2_table_builds_with_leak_safe_handover_features(pipeline_outputs):
+    from ontime.stage2.features import STAGE2_FEATURES
+    from ontime.stage2.run import build_stage2_table
+
+    t = build_stage2_table(write=False)
+    assert set(STAGE2_FEATURES) <= set(t.columns)
+    assert t["order_id"].is_unique and len(t) <= len(pipeline_outputs["features"])
+    assert (t["t1"] >= t["approved_at"]).all()  # decision time is never before approval
+    assert (t["days_to_handover"] >= 0).all()
+    share = t["dest_backlog_share"].dropna()
+    assert share.between(0, 1).all() and len(share) > 0.5 * len(t)

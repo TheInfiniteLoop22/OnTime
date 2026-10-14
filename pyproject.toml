@@ -68,3 +68,4 @@ pythonpath = ["src"]
 "app/**/*.py" = ["E501", "E402"]  # UI copy and sys.path setup before imports
 "src/ontime/reporting/*.py" = ["E501"]  # table/markdown generation
 "src/ontime/models/rolling.py" = ["E501"]  # dense table/plot code
+"src/ontime/stage2/*.py" = ["E501"]  # dense table/plot code
