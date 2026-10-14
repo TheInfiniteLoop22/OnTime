@@ -252,7 +252,7 @@ runs the real stages on it, so CI never needs the Kaggle download.
 | `src/ontime/monitoring` | PSI drift and performance-by-month monitor |
 | `src/ontime/deploy` | deploy-branch bundle builder |
 | `app/` | Streamlit app (`Home.py`, `views/`, `ontime_ui/`) |
-| `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability |
+| `notebooks/` | 01 EDA, 02 impact analysis, 03 modelling walkthrough, 04 explainability, 05 diagnosing the decay and the handover stage |
 | `reports/` | generated results, model card, figures (the data and models are git-ignored) |
 | `docs/` | specs, `PHASE_LOG.md` (what was done), `DECISIONS_LOG.md` (why), `LEARNING_LOG.md` (interview notes) |
 

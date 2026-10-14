@@ -53,6 +53,7 @@ notebooks:
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/02_impact_analysis.ipynb
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/03_modeling_walkthrough.ipynb
 	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/04_explainability.ipynb
+	uv run jupyter nbconvert --to notebook --execute --inplace notebooks/05_stage2_handover.ipynb
 
 app:
 	uv run streamlit run app/Home.py
