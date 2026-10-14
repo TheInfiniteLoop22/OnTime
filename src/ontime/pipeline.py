@@ -102,6 +102,20 @@ def stage_stage2() -> None:
     run_stage2()
 
 
+def stage_scores() -> None:
+    """Precompute test-period scores so the app starts without scoring (fast cold start)."""
+    from ontime.serving.batch import write_test_scores
+
+    write_test_scores()
+
+
+def stage_bundle() -> None:
+    """Build the deploy bundle and push it to the `deploy` branch (main stays data-free)."""
+    from ontime.deploy.bundle import publish_deploy_branch
+
+    log.info("bundle | %s", publish_deploy_branch(push=True))
+
+
 def stage_report() -> None:
     """Generate README.md and reports/model_card.md from the result files."""
     from ontime.reporting.render import build_reports
@@ -117,6 +131,8 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "scores": stage_scores,
+    "bundle": stage_bundle,
     "stage2": stage_stage2,
     "rolling": stage_rolling,
     "monitor": stage_monitor,

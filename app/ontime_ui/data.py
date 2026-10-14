@@ -69,7 +69,13 @@ def slices() -> pd.DataFrame:
 
 @st.cache_data(show_spinner="Scoring the test period...")
 def test_scored() -> pd.DataFrame:
-    """Test-period orders with calibrated scores and within-day ranks for each model."""
+    """Test-period orders with calibrated scores and within-day ranks for each model.
+
+    Uses reports/test_scores.parquet (made by `make scores`) when present for a fast start.
+    """
+    pre = REPORTS / "test_scores.parquet"
+    if pre.exists():
+        return pd.read_parquet(pre)
     svc = get_service()
     t = features_all()
     test = t[t["split"] == "test"].reset_index(drop=True)

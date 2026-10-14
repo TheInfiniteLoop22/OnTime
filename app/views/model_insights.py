@@ -38,7 +38,15 @@ c.hero(
 )
 
 tabs = st.tabs(
-    ["Performance", "Calibration", "Stability", "Explainability", "Where it is weak", "Limits"]
+    [
+        "Performance",
+        "Stage 2: at handover",
+        "Calibration",
+        "Stability",
+        "Explainability",
+        "Where it is weak",
+        "Limits",
+    ]
 )
 
 # ------------------------------------------------------------------ performance
@@ -132,8 +140,133 @@ with tabs[0]:
     else:
         c.callout("<b>Verdict:</b> the EBM and LightGBM differ reliably; see the interval above.")
 
-# ------------------------------------------------------------------ calibration
+# ------------------------------------------------------------------ stage 2
 with tabs[1]:
+    s2_path = data.REPORTS / "stage2_results.json"
+    if not s2_path.exists():
+        st.info("Stage-2 results are missing. Run `make stage2` and reload.")
+    else:
+        s2 = data.read_json("stage2_results.json")
+        t2 = s2["test"]
+        m1, m2 = t2["stage1"]["metrics"], t2["stage2"]["metrics"]
+        k1 = next(t for t in t2["stage1"]["top_k"] if abs(t["k"] - 0.10) < 1e-9)
+        k2 = next(t for t in t2["stage2"]["top_k"] if abs(t["k"] - 0.10) < 1e-9)
+        win = t2["action_window_for_late_orders"]
+        st.markdown(
+            "**Idea:** re-score each order when the seller **hands it to the carrier** (usually within a "
+            "couple of days of approval). Everything known at approval is still used; the handover "
+            "timestamp and a destination *backlog* signal (earlier orders still in transit) are added. "
+            "The customer delivery date is still never used."
+        )
+        a, b, c3, d = st.columns(4)
+        with a:
+            c.kpi(
+                "PR-AUC at approval",
+                f"{m1['pr_auc']['value']:.3f}",
+                f"base rate {t2['late_rate']:.3f}",
+            )
+        with b:
+            c.kpi(
+                "PR-AUC at handover",
+                f"{m2['pr_auc']['value']:.3f}",
+                f"95% CI [{m2['pr_auc']['ci95'][0]:.3f}, {m2['pr_auc']['ci95'][1]:.3f}]",
+            )
+        with c3:
+            c.kpi("Lift at 10% capacity", f"{k2['lift']:.1f}x", f"vs {k1['lift']:.1f}x at approval")
+        with d:
+            c.kpi(
+                "Time left to act",
+                f"{win['median_days_left_at_handover']:.0f} days",
+                f"median before the promised date for late orders; {win['share_with_3plus_days_left']:.0%} "
+                "have 3+ days left",
+            )
+        st.write("")
+        mm = pd.DataFrame(t2["monthly"])
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=mm["month"],
+                y=mm["stage1_roc_auc"],
+                mode="lines+markers",
+                name="At approval (stage 1)",
+                line={"color": theme.BLUE, "width": 2},
+                marker={"size": 8},
+                hovertemplate="%{y:.2f}",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=mm["month"],
+                y=mm["stage2_roc_auc"],
+                mode="lines+markers",
+                name="At handover (stage 2)",
+                line={"color": theme.ORANGE, "width": 2},
+                marker={"size": 8},
+                hovertemplate="%{y:.2f}",
+            )
+        )
+        fig.add_hline(
+            y=0.5, line_dash="dash", line_color=theme.MUTED, annotation_text="random = 0.5"
+        )
+        fig.update_yaxes(title_text="ROC-AUC by month", range=[0.4, 0.9])
+        st.plotly_chart(theme.style_fig(fig, 340), width="stretch")
+        c.caption(
+            "Look at the last months: the approval-time model decays while the handover-time model "
+            "holds, because it can see the backlog building before outcomes arrive."
+        )
+
+        ab = pd.DataFrame(
+            [
+                {
+                    "Feature set": k,
+                    "PR-AUC (validation)": v["pr_auc"],
+                    "ROC-AUC (validation)": v["roc_auc"],
+                }
+                for k, v in s2["ablation_validation_logreg"].items()
+            ]
+        )
+        st.markdown("**What each block adds (logistic regression, validation period only)**")
+        st.dataframe(ab.round(3), hide_index=True, width="stretch")
+        w = s2["backlog_within_state_month"]
+        c.caption(
+            f"The backlog says *when and where* trouble is, not which order: its median AUC within a single "
+            f"state-month is only {w['median_auc']:.2f} (over {w['groups']} groups), so it is not encoding "
+            "each order's own outcome."
+        )
+
+        pol = pd.DataFrame(t2["policy"])
+        p_opts = sorted(pol["p"].unique())
+        pv = st.select_slider(
+            "Assumed intervention success",
+            options=p_opts,
+            value=p_opts[len(p_opts) // 2],
+            format_func=lambda v: f"{v:.0%}",
+            key="s2_p",
+        )
+        sel = pol[(pol["p"] == pv) & (pol["k"].round(3) == 0.10)].set_index("strategy")
+        cA, cB, cC, cD = st.columns(4)
+        cA.metric("Prevented: random picking", f"{sel.loc['random', 'prevented_expected']:.0f}")
+        cB.metric("Prevented: at approval", f"{sel.loc['stage1', 'prevented_expected']:.0f}")
+        cC.metric(
+            "Prevented: at handover",
+            f"{sel.loc['stage2', 'prevented_expected']:.0f}",
+            f"{sel.loc['stage2', 'prevented_share_of_late']:.0%} of all late",
+        )
+        cD.metric("Ceiling (perfect ranking)", f"{sel.loc['oracle', 'prevented_expected']:.0f}")
+        c.caption(
+            "Simulation at 10% daily capacity; the success rate is an assumption. Acting at handover "
+            "leaves fewer days than acting at approval, and some interventions may no longer be possible."
+        )
+        c.callout(
+            "<b>Read with care.</b> The test months were already used once to evaluate the approval-time "
+            "model, so this is a second, separately pre-declared model on the same months (selected by "
+            "validation, scored once), not a first-look hold-out. It outputs a ranking only (no calibration "
+            "fitted); use rank and bands.",
+            kind="warn",
+        )
+
+# ------------------------------------------------------------------ calibration
+with tabs[2]:
     sc = data.test_scored()
     y = sc["is_late"].to_numpy()
     fig = go.Figure()
@@ -193,7 +326,7 @@ with tabs[1]:
     )
 
 # ------------------------------------------------------------------ stability
-with tabs[2]:
+with tabs[3]:
     mon = pd.DataFrame(res["monthly"])
     fig = go.Figure()
     for m in MODELS:
@@ -251,7 +384,7 @@ with tabs[2]:
     )
 
 # ------------------------------------------------------------------ explainability
-with tabs[3]:
+with tabs[4]:
     summ = data.read_json("explain_summary.json")["agreement"]
     rk = summ["rank_agreement"]
     d = summ["direction"]
@@ -292,7 +425,7 @@ with tabs[3]:
     )
 
 # ------------------------------------------------------------------ slices
-with tabs[4]:
+with tabs[5]:
     sl = data.slices()
     which = st.selectbox(
         "Model",
@@ -346,7 +479,7 @@ with tabs[4]:
     )
 
 # ------------------------------------------------------------------ limits
-with tabs[5]:
+with tabs[6]:
     vm = val["models"][prim]["raw_metrics"]
     st.markdown(
         f"""

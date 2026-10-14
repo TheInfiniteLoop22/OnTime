@@ -1,4 +1,4 @@
-.PHONY: setup data build features baselines train evaluate explain impact monitor rolling stage2 report notebooks app test lint format all
+.PHONY: setup data build features baselines train evaluate explain impact monitor rolling stage2 scores bundle report notebooks app test lint format all
 
 PY = uv run python
 
@@ -29,6 +29,12 @@ explain:
 
 impact:
 	$(PY) -m ontime.pipeline impact
+
+scores:
+	$(PY) -m ontime.pipeline scores
+
+bundle:
+	$(PY) -m ontime.pipeline bundle
 
 stage2:
 	$(PY) -m ontime.pipeline stage2
@@ -62,4 +68,4 @@ format:
 	uv run ruff check --fix .
 	uv run ruff format .
 
-all: data build impact features baselines train evaluate explain monitor rolling stage2 report
+all: data build impact features baselines train evaluate explain monitor rolling stage2 scores report

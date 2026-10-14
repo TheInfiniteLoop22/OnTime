@@ -10,8 +10,10 @@ import sys
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent
-if str(APP_DIR) not in sys.path:
-    sys.path.insert(0, str(APP_DIR))
+SRC_DIR = APP_DIR.parent / "src"  # lets a plain checkout (e.g. Streamlit Cloud) import `ontime`
+for p in (APP_DIR, SRC_DIR):
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
 import streamlit as st  # noqa: E402
 
