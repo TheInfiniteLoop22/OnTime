@@ -248,3 +248,57 @@ New entries are appended at the end of every phase. Numbers cited here come from
 - **Why:** PR-AUC has no fixed floor of 0.5; the floor is the positive rate (12.6% on
   validation, 4.5% on test). Quoting a PR-AUC without it is meaningless, and the two splits
   have different floors, so comparisons across splits must use lift or the difference to base.
+
+---
+
+### D-043 - Validation split by time into tune / calib_fit / calib_eval (Phase 6)
+- **Alternatives:** tune and calibrate on all validation (plan warns it is optimistic);
+  K-fold CV (forbidden by rule 3 unless expanding-window).
+- **Why:** tuning and calibration must not share rows; evaluation of calibrators must come
+  *after* their fit rows in time, mimicking deployment. The split dates are in config.
+- **Cost:** small slices (calib_eval has only 185 late orders), so calibrator comparison is
+  noisy; I report the table rather than hide it.
+
+### D-044 - val_calib is the honest column; val_tune numbers are labelled optimistic (Phase 6)
+- **Why:** hyperparameters and early stopping both use val_tune, so its scores are biased
+  upward. Models are compared on val_calib, which tuning never sees.
+
+### D-045 - Calibrator candidates include "none"; choice is forward-in-time by Brier (Phase 6)
+- **Why:** if scores are already reasonable, calibration only adds noise (LR and RF kept
+  "none"). Isotonic is flexible and can win by memorizing its fit rows; evaluating on later
+  rows removes that advantage. Deployed calibrator is refit on all of val_calib.
+
+### D-046 - Class weighting is a searched hyperparameter, not an assumption (Phase 6)
+- **Why:** spec: "let the validation set decide". For LightGBM, `scale_pos_weight` options are
+  none / sqrt / balanced. Because we calibrate, weighting only matters for ranking quality.
+- **Result:** helped LightGBM on val_tune, hurt LR; evidence is weak (unequal trial counts).
+
+### D-047 - EBM early stopping uses a TIME-ordered validation slice via `bags` (Phase 6)
+- **Alternatives:** EBM's default internal random validation split; no early stopping.
+- **Why:** rule 3. The latest 15% of train (by approval time) is the validation set in every
+  outer bag; remaining rows are bootstrapped per bag, keeping bagging's variance reduction.
+
+### D-048 - Final models are trained on train only, not refit on train + validation (Phase 6)
+- **Alternatives:** refit on train + val_tune (more recent data).
+- **Why:** clean, reproducible provenance and a hold-out that stays valid; also keeps Phase 7
+  simple. **Cost:** the model never learns from the Feb-Apr 2018 regime. Revisit as future work.
+
+### D-049 - Random forest uses fixed settings, no tuning (Phase 6)
+- **Why:** it is a sanity comparison per the spec, not a contender; fixed
+  `min_samples_leaf=50` avoids memorizing individual orders.
+
+### D-050 - LR preprocessing choices (Phase 6)
+- **Choices:** median impute + missing indicators, log1p on 9 skewed quantities, one-hot for
+  region/category/payment and also for weekday/month (cyclical, not ordered), duplicates
+  (`log_distance_km`) dropped, rare levels pooled below 1%.
+- **Note:** the search range for C ends at 100 and the optimum (50) sits near it: a wider range
+  might help slightly; weak regularization suggests the model is not overfit-prone here.
+
+### D-051 - Did not re-tune after seeing val_calib (Phase 6)
+- **Why:** each look-and-adjust cycle leaks the hold-out into the model. The right fix for
+  regime-specific tuning (CV over several regimes) is presented to the owner as a decision
+  rather than silently applied.
+
+### D-052 - Determinism is checked by running training twice (Phase 6)
+- **Why:** CLAUDE.md rule 7. Result: identical for LR/LightGBM/EBM; RF within ~1e-17 due to
+  parallel float summation, which is acceptable and documented.

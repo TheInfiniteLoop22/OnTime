@@ -136,6 +136,33 @@ def bootstrap_topk_ci(
     return {k: (float(np.percentile(v, lo)), float(np.percentile(v, hi))) for k, v in draws.items()}
 
 
+def paired_bootstrap_pr_auc_diff(
+    y: np.ndarray, p_a: np.ndarray, p_b: np.ndarray, n_boot: int, seed: int, level: float = 0.95
+) -> dict[str, float | list[float]]:
+    """PR-AUC(a) - PR-AUC(b) with a paired percentile bootstrap CI.
+
+    Paired = both models are scored on the SAME resampled orders, so the interval reflects the
+    difference between models, not the (much larger) sampling noise of each PR-AUC alone.
+    If the CI excludes 0, the difference is unlikely to be sampling noise.
+    """
+    y, p_a, p_b = np.asarray(y), np.asarray(p_a, float), np.asarray(p_b, float)
+    rng = np.random.default_rng(seed)
+    n = len(y)
+    diffs = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, n, n)
+        if y[idx].min() == y[idx].max():
+            continue
+        diffs.append(
+            average_precision_score(y[idx], p_a[idx]) - average_precision_score(y[idx], p_b[idx])
+        )
+    lo, hi = (1 - level) / 2 * 100, (1 + level) / 2 * 100
+    return {
+        "diff": float(average_precision_score(y, p_a) - average_precision_score(y, p_b)),
+        "ci95": [float(np.percentile(diffs, lo)), float(np.percentile(diffs, hi))],
+    }
+
+
 def evaluate_scores(
     dates: pd.Series,
     y: np.ndarray,

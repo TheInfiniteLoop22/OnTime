@@ -89,5 +89,13 @@ policy:
   intervention_success_grid: [0.1, 0.2, 0.3, 0.5]  # ASSUMED prob. an intervention prevents lateness
 
 tuning:
-  optuna_trials: 50
+  optuna_trials: 50            # LightGBM
+  optuna_trials_logreg: 25
+  optuna_trials_ebm: 12
   bootstrap_resamples: 1000
+  # Validation is split BY TIME so tuning and calibration never share rows:
+  #   validation 2018-02-01..04-30 = [ val_tune | val_calib = (calib_fit | calib_eval) ]
+  val_tune_end: "2018-03-15"   # tune hyperparameters / early-stop on <= this date
+  calib_fit_end: "2018-04-07"  # fit calibrators on val_calib <= this, score the rest
+  ebm_early_stop_fraction: 0.15  # latest 15% of TRAIN (by time) used for EBM early stopping
+  lgbm_early_stopping_rounds: 100

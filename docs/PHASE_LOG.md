@@ -274,3 +274,80 @@ will be modest, not dramatic.
 
 **Verification:** pytest 67 passed; ruff check + format clean; `make baselines` regenerates
 `reports/baselines.json`. Test split untouched (guarded in code).
+
+---
+
+## Phase 6 - Models, tuning, calibration (2026-10-14)
+
+**Goal:** train logistic regression, EBM, LightGBM (+ random forest for comparison), tune on
+validation, test class weighting, calibrate - without letting tuning and calibration share data.
+
+**Acceptance (BUILD_PLAN):** `reports/validation_results.json` has all models; a comparison table
+is printed; saved models reload and reproduce validation scores.
+
+**Built**
+- `models/data.py` - model-ready frames, saved category levels, time sub-splits of validation.
+- `models/train.py` - preprocessing (impute + indicators, log + scale, one-hot) and fitters for
+  LR, RF, LightGBM (early stopping on PR-AUC), EBM (time-ordered early stopping via `bags`).
+- `models/tune.py` - Optuna studies (objective: PR-AUC on `val_tune`); class-weight is a searched
+  hyperparameter so the experiment is recorded.
+- `models/calibrate.py` - none / sigmoid / isotonic, chosen forward-in-time by Brier.
+- `models/run.py` - orchestration, persistence (`models/*.joblib` + metadata), reload check,
+  comparison table. `make train` wired; `evaluation/metrics.py` gained a paired bootstrap.
+- Tests: `tests/test_models.py` (11). Suite: 78 passing.
+- Outputs: `reports/validation_results.json`, `reports/model_comparison.md`, 4 saved models.
+
+**How validation was split (all by time)**
+| sub-split | dates | orders | late | late rate | role |
+|---|---|---|---|---|---|
+| train | 2016-09-15..2018-01-31 | 50,603 | 2,852 | 5.6% | fit models |
+| val_tune | 02-01..03-15 | 10,057 | 1,784 | 17.7% | tune + early stop |
+| calib_fit | 03-16..04-07 | 5,141 | 587 | 11.4% | fit calibrators |
+| calib_eval | 04-08..04-30 | 5,043 | 185 | 3.7% | check calibrators |
+`val_calib` = calib_fit + calib_eval (10,184 orders, 7.6% late) is never seen by tuning, so it
+is the honest out-of-sample column.
+
+**Results (from `reports/validation_results.json`)**
+| model | PR-AUC val_tune (tuned on) | PR-AUC val_calib [95% CI] (honest) | ROC-AUC val_calib | lift@10% val_calib | calibrator |
+|---|---|---|---|---|---|
+| prior rate | 0.177 | 0.076 | 0.500 | - | - |
+| rule | 0.230 | 0.102 | 0.627 | - | - |
+| logreg | 0.372 | **0.174** [0.157, 0.196] | 0.716 | 3.06 | none |
+| random forest | 0.360 | 0.126 [0.113, 0.144] | 0.595 | 2.19 | none |
+| lightgbm | 0.393 | 0.137 [0.122, 0.159] | 0.621 | 2.44 | sigmoid |
+| ebm | **0.395** | 0.122 [0.109, 0.139] | 0.592 | 2.38 | sigmoid |
+- Base rate on val_calib is 7.6%, so logistic regression is ~2.3x better than guessing in
+  PR-AUC and ~3x in lift at 10% capacity; the rule baseline is 0.102.
+- Paired PR-AUC differences on val_calib: LR - LightGBM = +0.037 [+0.024, +0.050];
+  EBM - LightGBM = -0.015 [-0.030, -0.002]; EBM - LR = -0.052 [-0.068, -0.037].
+- Class weighting: LR - unweighted better (best 0.372 vs 0.359 balanced). LightGBM - `balanced`
+  won the search (0.393 vs 0.374 unweighted) but TPE concentrated trials (42 balanced vs 3
+  unweighted), so this is weak evidence. A balanced model's raw probabilities are unusable
+  (calib_eval Brier 0.435) until calibrated (0.043).
+- Chosen hyperparameters are in the JSON (LR C = 50.4 near the top of the 0.001..100 range).
+- Reload check: all four models reproduce validation scores (max abs diff <= 1e-16).
+- Two full runs produced identical metrics for LR, LightGBM and EBM; the random forest differs
+  only at ~1e-17 (parallel float summation).
+
+**Findings that matter (read these)**
+1. **Ranking skill is regime-dependent.** EBM/LightGBM lead on val_tune (the Feb-Mar surge they
+   were tuned on) but fall behind logistic regression on the calmer val_calib. Part of the
+   val_tune advantage is tuning optimism; part may be real surge-specific structure.
+2. **Calibration on the past is hostage to the regime.** On calib_eval (3.7% late) no model's
+   Brier beats the constant train rate (0.0357): LR 0.038, RF 0.042, LightGBM 0.043, EBM 0.045.
+   Calibrators fit on calib_fit (11.4% late) push probabilities up just as the rate fell.
+   For production this means: recalibrate on a rolling recent window; trust ranking more than
+   absolute probability, and say so in the app.
+3. **Test will likely over-predict:** test is 4.5% late vs 7.6% on val_calib, the data the
+   deployed calibrators were fitted on. Phase 7 will report this and a monthly-recalibrated view.
+
+**Deliberate non-actions (to keep the validation hold-out honest)**
+- I did not re-tune after seeing val_calib results. Doing so would contaminate the only
+  untouched validation slice. See open decision below.
+- Final models are fit on train only (not refit on train + validation).
+
+**Open decision for the owner:** re-tune with expanding-window time-series CV over train + val_tune
+(more regimes in the objective, rule 3-compliant). It would likely make hyperparameters less
+surge-specific, but it uses val_calib's lesson, so val_calib would stop being fully clean.
+
+**Verification:** pytest 78 passed; ruff clean; `make train` ~5 minutes; saved models reload.

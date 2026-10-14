@@ -13,7 +13,6 @@ from ontime.config import setup_logging
 log = logging.getLogger("ontime.pipeline")
 
 PENDING: dict[str, str] = {
-    "train": "Phase 6",
     "evaluate": "Phase 7",
     "explain": "Phase 8",
 }
@@ -71,7 +70,15 @@ def stage_baselines() -> None:
     run_baselines()
 
 
+def stage_train() -> None:
+    """Tune, fit, calibrate and evaluate all models on validation; save to models/."""
+    from ontime.models.run import run_training
+
+    run_training()
+
+
 STAGES = {
+    "train": stage_train,
     "baselines": stage_baselines,
     "data": stage_data,
     "build": stage_build,

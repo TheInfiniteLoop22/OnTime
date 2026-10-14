@@ -152,3 +152,47 @@ validation, and the model's improvement is understated.
 
 **Why calibrated probabilities for the rule?** So Brier and log loss are defined for it; a raw
 0/1 flag has no probability quality to measure.
+
+---
+
+## Phase 6 - Models, tuning, calibration
+
+**Logistic regression vs gradient boosting?** LR fits one weight per (scaled) feature; its
+coefficients exponentiate to odds ratios, so it is transparent but cannot bend. Gradient boosting
+adds many shallow trees, each correcting the previous ones' errors, so it captures non-linear
+effects and interactions at the cost of transparency.
+
+**What is an EBM and how is it different from a GAM and from boosting?** A GAM is a sum of one
+smooth function per feature. An EBM *is* a GAM, but its shape functions are learned by cyclic
+gradient boosting with tiny trees, one feature at a time, and it can add a few pairwise
+interaction terms. Result: boosting-level accuracy with GAM-level readability - you can plot
+exactly how each feature moves the score.
+
+**What does early stopping do?** Boosting keeps adding trees; after some point it fits noise.
+Early stopping watches a held-out set and stops when its metric has not improved for N rounds,
+so the number of trees is chosen by data rather than guessed. The held-out set here is the
+latest slice of time, not a random sample.
+
+**Why Optuna, and why not tune on the test set?** Optuna's TPE sampler proposes the next
+hyperparameters from the results so far, finding good settings in far fewer trials than a grid.
+Anything tuned on a set gets optimistic scores on it, so we tune on one slice, calibrate on a
+later one and keep the test untouched.
+
+**What is calibration, with an example?** Among orders the model scores 0.30, about 30 in 100
+should be late. A class-weighted model may say 0.80 for those same orders - ranking is intact
+but the number is a lie. A calibrator learns the map from score to real frequency. Sigmoid
+(Platt) has 2 parameters and is stable; isotonic is a monotone step function and is flexible
+but needs more data.
+
+**Why did class weighting help LightGBM's ranking search yet destroy its probabilities?**
+Weights make positives "count more", which changes the scores' scale (the model is trained for a
+50/50 world). Ranking can be fine; probabilities are not, hence calibration after.
+
+**Why do calibrated probabilities get worse when the world changes?** A calibrator memorizes
+"scores of 0.3 mean 30% late" for the period it was fit on. If the base rate then falls, the same
+scores now over-predict. Hence rolling recalibration in production, and trusting rank over
+absolute risk when conditions shift.
+
+**Why can a simple model beat a fancy one out of time?** Flexible models can learn patterns
+specific to the period they were tuned on (like a Feb-Mar surge). Constrained models carry less
+of that baggage. The only way to know is a later hold-out - which is what val_calib is.
