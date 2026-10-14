@@ -1,4 +1,4 @@
-.PHONY: setup data build features train evaluate explain impact notebooks app test lint format all
+﻿.PHONY: setup data build features baselines train evaluate explain impact notebooks app test lint format all
 
 PY = uv run python
 
@@ -14,6 +14,9 @@ build:
 
 features:
 	$(PY) -m ontime.pipeline features
+
+baselines:
+	$(PY) -m ontime.pipeline baselines
 
 train:
 	$(PY) -m ontime.pipeline train

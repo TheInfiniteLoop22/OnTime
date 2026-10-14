@@ -234,3 +234,43 @@ forbidden column in the feature list; `reports/feature_summary.md` exists.
 
 **Verification:** pytest 54 passed; ruff check + format clean; `make features` regenerates
 parquet and both reports.
+
+---
+
+## Phase 5 - Baselines, splits and metrics (2026-10-14)
+
+**Goal:** a trusted evaluation toolkit and the floor every model must beat.
+
+**Acceptance (BUILD_PLAN):** baseline validation metrics in `reports/baselines.json`; metric
+functions unit-tested against sklearn on toy inputs; `splits.py` asserts no time overlap.
+
+**Built**
+- `models/splits.py` - added `select_split()` (test split locked unless `final_evaluation=True`,
+  CLAUDE.md rule 4) and `assert_no_time_overlap()`.
+- `evaluation/metrics.py` - PR-AUC, ROC-AUC, Brier, log loss; daily precision@k / recall@k /
+  lift@k; percentile bootstrap CIs (orders resampled for order-level metrics, whole DAYS
+  resampled for top-k metrics); `evaluate_scores()` one-stop evaluator.
+- `models/baselines.py` - `PriorRateBaseline`, `RuleBaseline` (two candidate hand rules,
+  threshold picked on TRAIN by F1), `run_baselines()`.
+- `make baselines`; `tests/test_metrics_baselines.py` (13 tests). Suite: 67 passing.
+
+**Results (validation set only; from `reports/baselines.json`)**
+| | PR-AUC [95% CI] | ROC-AUC | Brier | log loss | precision@10% | lift@10% |
+|---|---|---|---|---|---|---|
+| prior rate (5.64%, train) | 0.1263 [0.1215, 0.1307] | 0.500 | 0.1152 | 0.4139 | 0.129 | 1.02 |
+| rule | 0.1684 [0.1619, 0.1751] | 0.633 | 0.1136 | 0.4007 | 0.177 | 1.40 |
+
+- Validation base rate is 12.6%, so the prior baseline's PR-AUC is simply that base rate: this
+  is the number to compare models against (not zero).
+- Chosen rule (train only): different states AND promised_days < 32.1 days (train F1 = 0.129);
+  it flags 53.6% of validation orders. It beats the prior with non-overlapping PR-AUC CIs but is
+  a blunt tool: lift about 1.4 at every k.
+- The prior baseline's Brier (0.1152) sits above the 0.1103 an oracle constant would get on
+  validation (= p(1-p) with p = 0.1263). The gap is the cost of the train->validation shift.
+
+**What this tells us for Phase 6:** a model has to clear PR-AUC ~0.17 and lift ~1.4 at 10% just
+to beat a one-line rule; the leaky-feature results from Phase 4 warn us that gains over this
+will be modest, not dramatic.
+
+**Verification:** pytest 67 passed; ruff check + format clean; `make baselines` regenerates
+`reports/baselines.json`. Test split untouched (guarded in code).

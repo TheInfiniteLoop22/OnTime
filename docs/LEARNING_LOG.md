@@ -120,3 +120,35 @@ compared against a trivially correct reference finds the ones you did not.
 **Why can a feature that is leak-free still drift?** Platform growth makes `seller_n_past`
 larger in later periods; the model trained on small numbers sees large ones at test time. We
 check per-split means for exactly this.
+
+---
+
+## Phase 5 - Metrics and baselines
+
+**Why PR-AUC and what is its baseline?** PR-AUC summarizes precision vs recall across all
+thresholds. A random scorer's PR-AUC equals the positive rate (12.6% on validation here), not
+0.5 like ROC-AUC. So "PR-AUC = 0.17" means "about 1.3x better than random".
+
+**Why not ROC-AUC as the headline?** With few positives, ROC-AUC is dominated by the huge
+negative class (false-positive *rate* stays small even when precision is poor), so it looks
+flattering. PR-AUC reacts directly to precision.
+
+**What is precision@k / recall@k / lift?** If ops can touch k% of orders: precision@k = share of
+those that are truly late; recall@k = share of all late orders that we reached; lift = precision@k
+divided by the base rate ("how many times better than picking at random").
+
+**Why a daily quota?** Capacity is per day. A single global top-k hides that bad days would
+swallow the budget.
+
+**What is a bootstrap CI for a ranking metric?** Resample (orders or days) with replacement,
+recompute the metric, take percentiles. It answers "how much would this number move with a
+different sample?".
+
+**Why baselines at all?** They anchor the claim. "Our model has PR-AUC 0.30" means little;
+"0.30 vs 0.17 for a one-line rule vs 0.13 for guessing the base rate" is a result.
+
+**Why choose the rule threshold on train only?** Otherwise the baseline gets a free peek at
+validation, and the model's improvement is understated.
+
+**Why calibrated probabilities for the rule?** So Brier and log loss are defined for it; a raw
+0/1 flag has no probability quality to measure.

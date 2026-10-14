@@ -218,3 +218,33 @@ New entries are appended at the end of every phase. Numbers cited here come from
 ### D-037 - Split labels use whole-day boundaries with a contiguity assertion (Phase 4)
 - **Why:** `train_end`/`val_end` are dates meant inclusively; an order approved at 23:59 on the
   last day must be in that split. The code refuses configs with gaps or overlaps.
+
+---
+
+### D-038 - Test split is locked in code, not by convention (Phase 5)
+- **Alternatives:** rely on discipline; keep test in a separate file.
+- **Why:** CLAUDE.md rule 4. `select_split("test")` raises unless `final_evaluation=True`, so
+  touching the test set is an explicit, reviewable argument. Tested.
+
+### D-039 - Top-k is evaluated per DAY, ties broken by seeded jitter (Phase 5)
+- **Why:** ops capacity is daily ("act on k% of today's orders"), not a global quota; a global
+  top-k would concentrate all actions on bad days and overstate precision. Random tie-breaking
+  makes constant-score baselines equivalent to random selection instead of favouring
+  row order, and is reproducible via the seed.
+
+### D-040 - Bootstrap by days for top-k metrics, by orders for the rest (Phase 5)
+- **Why:** orders on the same day share carrier conditions and are not independent; resampling
+  orders would give intervals that are too narrow for top-k metrics.
+
+### D-041 - Rule baseline: two named families, threshold on train by F1 (Phase 5)
+- **Alternatives:** only the spec's inter-state & promised_days rule; optimize for precision.
+- **Why:** "what an analyst would write by hand" includes the obvious distance rule; picking
+  between two fixed families by train F1 is a fair, simple contest. The rule gets calibrated
+  two-level probabilities from train so Brier/log loss are defined.
+- **Trade-off:** F1 on a 5.6% class gives a broad rule (flags >50% of validation orders); a
+  precision-oriented rule would flag fewer but is just a different point on the same curve.
+
+### D-042 - PR-AUC baseline is the base rate, reported next to every model (Phase 5)
+- **Why:** PR-AUC has no fixed floor of 0.5; the floor is the positive rate (12.6% on
+  validation, 4.5% on test). Quoting a PR-AUC without it is meaningless, and the two splits
+  have different floors, so comparisons across splits must use lift or the difference to base.

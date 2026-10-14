@@ -64,7 +64,15 @@ def stage_features() -> None:
     build()
 
 
+def stage_baselines() -> None:
+    """Fit prior-rate and rule baselines on train, score validation, write baselines.json."""
+    from ontime.models.baselines import run_baselines
+
+    run_baselines()
+
+
 STAGES = {
+    "baselines": stage_baselines,
     "data": stage_data,
     "build": stage_build,
     "features": stage_features,
