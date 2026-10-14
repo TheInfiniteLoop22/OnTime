@@ -38,11 +38,15 @@ def _log1p_nonneg(a: np.ndarray) -> np.ndarray:
     return np.log1p(np.clip(a, 0, None))
 
 
-def build_preprocessor() -> ColumnTransformer:
+def build_preprocessor(features: list[str] | None = None) -> ColumnTransformer:
     """Median-impute (+ missing indicators), log + scale skewed numerics, scale the rest,
-    one-hot categoricals. Fit on TRAIN only (it lives inside the sklearn Pipeline)."""
-    cat = CATEGORICAL_FEATURES + INT_AS_CATEGORY
-    num_all = [f for f in FEATURE_COLUMNS if f not in CATEGORICAL_FEATURES + INT_AS_CATEGORY]
+    one-hot categoricals. Fit on TRAIN only (it lives inside the sklearn Pipeline).
+
+    `features` restricts the model to a subset (used by the v2 ablations); default = all.
+    """
+    feats = list(features) if features is not None else list(FEATURE_COLUMNS)
+    cat = [f for f in CATEGORICAL_FEATURES + INT_AS_CATEGORY if f in feats]
+    num_all = [f for f in feats if f not in CATEGORICAL_FEATURES + INT_AS_CATEGORY]
     num_all = [f for f in num_all if f not in DROP_FOR_LINEAR]
     log_cols = [f for f in LOG_FEATURES if f in num_all]
     lin_cols = [f for f in num_all if f not in log_cols]
@@ -72,7 +76,8 @@ def _as_strings(X: pd.DataFrame) -> pd.DataFrame:
     """Linear/forest pipelines one-hot calendar ints and categories as plain strings."""
     X = X.copy()
     for c in CATEGORICAL_FEATURES + INT_AS_CATEGORY:
-        X[c] = X[c].astype(object).astype(str)
+        if c in X.columns:  # a feature subset may omit some of them
+            X[c] = X[c].astype(object).astype(str)
     return X
 
 
@@ -92,7 +97,9 @@ def pos_weight(option: str, y: np.ndarray) -> float:
     return {"none": 1.0, "sqrt": float(np.sqrt(ratio)), "balanced": float(ratio)}[option]
 
 
-def fit_logreg(X: pd.DataFrame, y: np.ndarray, params: dict, seed: int) -> Pipeline:
+def fit_logreg(
+    X: pd.DataFrame, y: np.ndarray, params: dict, seed: int, features: list[str] | None = None
+) -> Pipeline:
     clf = LogisticRegression(
         C=params["C"],
         class_weight=None if params["class_weight"] == "none" else "balanced",
@@ -100,7 +107,9 @@ def fit_logreg(X: pd.DataFrame, y: np.ndarray, params: dict, seed: int) -> Pipel
         max_iter=2000,
         random_state=seed,
     )
-    return _StringifyPipeline([("prep", build_preprocessor()), ("clf", clf)]).fit(X, y)
+    cols = list(features) if features is not None else None
+    pipe = _StringifyPipeline([("prep", build_preprocessor(cols)), ("clf", clf)])
+    return pipe.fit(X[cols] if cols is not None else X, y)
 
 
 def fit_random_forest(X: pd.DataFrame, y: np.ndarray, seed: int) -> Pipeline:

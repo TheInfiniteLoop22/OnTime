@@ -98,6 +98,24 @@ monitoring:
     customer_state_late_rate_shrunk, route_late_rate_shrunk, seller_late_rate_shrunk,
     seller_late_rate_90d_shrunk, seller_load_7d]
 
+rolling:                      # v2 study: monthly retraining backtest (see docs/PHASE_LOG.md)
+  first_month: "2018-02-01"
+  last_month: "2018-08-01"
+  min_train_orders: 5000
+  inner_validation_days: 45    # LR's C is chosen on the last 45 days BEFORE the month starts
+  c_grid: [0.01, 0.1, 1.0, 10.0, 50.0]
+  proxy_features: [approve_month, days_to_next_holiday, holidays_in_promise_window,
+    is_black_friday_window]    # calendar features that mostly encode "which part of the year"
+  lgbm:                        # generic defaults, deliberately NOT the v1-tuned values
+    num_leaves: 31
+    learning_rate: 0.05
+    min_child_samples: 100
+    colsample_bytree: 0.7
+    subsample: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    class_weight: none
+
 policy:
   capacity_grid: [0.05, 0.10, 0.20]          # fraction of daily orders ops can act on
   intervention_success_grid: [0.1, 0.2, 0.3, 0.5]  # ASSUMED prob. an intervention prevents lateness

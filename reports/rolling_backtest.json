@@ -1,0 +1,476 @@
+{
+  "status": "DEVELOPMENT BACKTEST - months were already seen (validation Feb-Apr, test May-Aug of v1); not a clean hold-out.",
+  "months": [
+    "2018-02",
+    "2018-03",
+    "2018-04",
+    "2018-05",
+    "2018-06",
+    "2018-07",
+    "2018-08"
+  ],
+  "training_sizes": {
+    "2018-02-01": {
+      "train_orders": 47770,
+      "eval_orders": 6534
+    },
+    "2018-03-01": {
+      "train_orders": 53618,
+      "eval_orders": 7083
+    },
+    "2018-04-01": {
+      "train_orders": 60442,
+      "eval_orders": 6624
+    },
+    "2018-05-01": {
+      "train_orders": 68277,
+      "eval_orders": 6940
+    },
+    "2018-06-01": {
+      "train_orders": 75388,
+      "eval_orders": 6094
+    },
+    "2018-07-01": {
+      "train_orders": 82217,
+      "eval_orders": 6021
+    },
+    "2018-08-01": {
+      "train_orders": 88030,
+      "eval_orders": 5038
+    }
+  },
+  "chosen_C": {
+    "2018-02-01": {
+      "retrain_logreg_full": 0.01,
+      "retrain_logreg_noproxy": 0.1
+    },
+    "2018-03-01": {
+      "retrain_logreg_full": 1.0,
+      "retrain_logreg_noproxy": 0.1
+    },
+    "2018-04-01": {
+      "retrain_logreg_full": 1.0,
+      "retrain_logreg_noproxy": 0.01
+    },
+    "2018-05-01": {
+      "retrain_logreg_full": 10.0,
+      "retrain_logreg_noproxy": 0.1
+    },
+    "2018-06-01": {
+      "retrain_logreg_full": 50.0,
+      "retrain_logreg_noproxy": 10.0
+    },
+    "2018-07-01": {
+      "retrain_logreg_full": 10.0,
+      "retrain_logreg_noproxy": 1.0
+    },
+    "2018-08-01": {
+      "retrain_logreg_full": 0.01,
+      "retrain_logreg_noproxy": 0.1
+    }
+  },
+  "summary": {
+    "static_v1": {
+      "label": "Deployed v1 (trained once, to Jan 2018)",
+      "macro_roc_auc": 0.7101549990813686,
+      "pooled_lift_at_10": 2.3726398771376385,
+      "last_month_roc_auc": 0.565851443104662,
+      "last_month_lift_at_10": 1.0693732591971339
+    },
+    "retrain_logreg_full": {
+      "label": "Logistic regression, monthly retrain, all features",
+      "macro_roc_auc": 0.7033807632441115,
+      "pooled_lift_at_10": 2.3404320960000233,
+      "last_month_roc_auc": 0.5189545155210391,
+      "last_month_lift_at_10": 1.0954555338116982,
+      "lift_diff_vs_static": {
+        "diff": -0.03220778113761513,
+        "ci95": [
+          -0.10165719906500066,
+          0.03527873891280832
+        ]
+      }
+    },
+    "retrain_logreg_noproxy": {
+      "label": "Logistic regression, monthly retrain, no calendar proxies",
+      "macro_roc_auc": 0.6900064033566586,
+      "pooled_lift_at_10": 2.3028563513394724,
+      "last_month_roc_auc": 0.5016077389467948,
+      "last_month_lift_at_10": 0.9389618861243128,
+      "lift_diff_vs_static": {
+        "diff": -0.06978352579816605,
+        "ci95": [
+          -0.14018623928146012,
+          0.004741104755237579
+        ]
+      }
+    },
+    "retrain_lgbm_full": {
+      "label": "LightGBM, monthly retrain, all features",
+      "macro_roc_auc": 0.63852931416973,
+      "pooled_lift_at_10": 1.8197396342752477,
+      "last_month_roc_auc": 0.5285932851919977,
+      "last_month_lift_at_10": 0.7042214145932345,
+      "lift_diff_vs_static": {
+        "diff": -0.5529002428623908,
+        "ci95": [
+          -0.6989479647627238,
+          -0.4054617186648788
+        ]
+      }
+    },
+    "retrain_lgbm_noproxy": {
+      "label": "LightGBM, monthly retrain, no calendar proxies",
+      "macro_roc_auc": 0.6155647477804492,
+      "pooled_lift_at_10": 1.7231162908624027,
+      "last_month_roc_auc": 0.38661608420192106,
+      "last_month_lift_at_10": 0.5738100415204134,
+      "lift_diff_vs_static": {
+        "diff": -0.6495235862752358,
+        "ci95": [
+          -0.7888189973712965,
+          -0.49149878861611646
+        ]
+      }
+    }
+  },
+  "proxy_ablation": {
+    "logreg": {
+      "noproxy_minus_full_lift": -0.037575744660550914,
+      "ci95": [
+        -0.0969407658118562,
+        0.02061836490084979
+      ]
+    },
+    "lgbm": {
+      "noproxy_minus_full_lift": -0.09662334341284495,
+      "ci95": [
+        -0.19236704917387754,
+        0.0025576718629354324
+      ]
+    }
+  },
+  "monthly": [
+    {
+      "variant": "static_v1",
+      "month": "2018-02",
+      "orders": 6534,
+      "late_rate": 0.1362,
+      "roc_auc": 0.7289,
+      "pr_auc": 0.3013,
+      "lift_at_10": 2.341
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-03",
+      "orders": 7083,
+      "late_rate": 0.192,
+      "roc_auc": 0.7254,
+      "pr_auc": 0.378,
+      "lift_at_10": 2.231
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-04",
+      "orders": 6624,
+      "late_rate": 0.0462,
+      "roc_auc": 0.7902,
+      "pr_auc": 0.1543,
+      "lift_at_10": 3.7466
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-05",
+      "orders": 6940,
+      "late_rate": 0.0654,
+      "roc_auc": 0.7456,
+      "pr_auc": 0.1651,
+      "lift_at_10": 2.8284
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-06",
+      "orders": 6094,
+      "late_rate": 0.0117,
+      "roc_auc": 0.776,
+      "pr_auc": 0.0521,
+      "lift_at_10": 3.1586
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-07",
+      "orders": 6021,
+      "late_rate": 0.0321,
+      "roc_auc": 0.6392,
+      "pr_auc": 0.0805,
+      "lift_at_10": 2.5829
+    },
+    {
+      "variant": "static_v1",
+      "month": "2018-08",
+      "orders": 5038,
+      "late_rate": 0.075,
+      "roc_auc": 0.5659,
+      "pr_auc": 0.0883,
+      "lift_at_10": 1.0694
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-02",
+      "orders": 6534,
+      "late_rate": 0.1362,
+      "roc_auc": 0.7306,
+      "pr_auc": 0.304,
+      "lift_at_10": 2.1981
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-03",
+      "orders": 7083,
+      "late_rate": 0.192,
+      "roc_auc": 0.7285,
+      "pr_auc": 0.3829,
+      "lift_at_10": 2.202
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-04",
+      "orders": 6624,
+      "late_rate": 0.0462,
+      "roc_auc": 0.7925,
+      "pr_auc": 0.1652,
+      "lift_at_10": 3.8747
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-05",
+      "orders": 6940,
+      "late_rate": 0.0654,
+      "roc_auc": 0.7465,
+      "pr_auc": 0.1712,
+      "lift_at_10": 2.7205
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-06",
+      "orders": 6094,
+      "late_rate": 0.0117,
+      "roc_auc": 0.7725,
+      "pr_auc": 0.0529,
+      "lift_at_10": 3.2959
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-07",
+      "orders": 6021,
+      "late_rate": 0.0321,
+      "roc_auc": 0.634,
+      "pr_auc": 0.0839,
+      "lift_at_10": 2.7854
+    },
+    {
+      "variant": "retrain_logreg_full",
+      "month": "2018-08",
+      "orders": 5038,
+      "late_rate": 0.075,
+      "roc_auc": 0.519,
+      "pr_auc": 0.0828,
+      "lift_at_10": 1.0955
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-02",
+      "orders": 6534,
+      "late_rate": 0.1362,
+      "roc_auc": 0.7269,
+      "pr_auc": 0.3029,
+      "lift_at_10": 2.2091
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-03",
+      "orders": 7083,
+      "late_rate": 0.192,
+      "roc_auc": 0.7203,
+      "pr_auc": 0.372,
+      "lift_at_10": 2.2238
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-04",
+      "orders": 6624,
+      "late_rate": 0.0462,
+      "roc_auc": 0.7757,
+      "pr_auc": 0.1352,
+      "lift_at_10": 3.6505
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-05",
+      "orders": 6940,
+      "late_rate": 0.0654,
+      "roc_auc": 0.7372,
+      "pr_auc": 0.1677,
+      "lift_at_10": 2.6557
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-06",
+      "orders": 6094,
+      "late_rate": 0.0117,
+      "roc_auc": 0.7487,
+      "pr_auc": 0.0435,
+      "lift_at_10": 3.2959
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-07",
+      "orders": 6021,
+      "late_rate": 0.0321,
+      "roc_auc": 0.6197,
+      "pr_auc": 0.0808,
+      "lift_at_10": 2.6841
+    },
+    {
+      "variant": "retrain_logreg_noproxy",
+      "month": "2018-08",
+      "orders": 5038,
+      "late_rate": 0.075,
+      "roc_auc": 0.5016,
+      "pr_auc": 0.0791,
+      "lift_at_10": 0.939
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-02",
+      "orders": 6534,
+      "late_rate": 0.1362,
+      "roc_auc": 0.6641,
+      "pr_auc": 0.2252,
+      "lift_at_10": 1.6486
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-03",
+      "orders": 7083,
+      "late_rate": 0.192,
+      "roc_auc": 0.4998,
+      "pr_auc": 0.2066,
+      "lift_at_10": 1.4777
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-04",
+      "orders": 6624,
+      "late_rate": 0.0462,
+      "roc_auc": 0.7031,
+      "pr_auc": 0.116,
+      "lift_at_10": 3.0741
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-05",
+      "orders": 6940,
+      "late_rate": 0.0654,
+      "roc_auc": 0.686,
+      "pr_auc": 0.1265,
+      "lift_at_10": 2.5909
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-06",
+      "orders": 6094,
+      "late_rate": 0.0117,
+      "roc_auc": 0.7569,
+      "pr_auc": 0.0381,
+      "lift_at_10": 3.7079
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-07",
+      "orders": 6021,
+      "late_rate": 0.0321,
+      "roc_auc": 0.6313,
+      "pr_auc": 0.0781,
+      "lift_at_10": 2.6335
+    },
+    {
+      "variant": "retrain_lgbm_full",
+      "month": "2018-08",
+      "orders": 5038,
+      "late_rate": 0.075,
+      "roc_auc": 0.5286,
+      "pr_auc": 0.0844,
+      "lift_at_10": 0.7042
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-02",
+      "orders": 6534,
+      "late_rate": 0.1362,
+      "roc_auc": 0.6498,
+      "pr_auc": 0.2082,
+      "lift_at_10": 1.4947
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-03",
+      "orders": 7083,
+      "late_rate": 0.192,
+      "roc_auc": 0.552,
+      "pr_auc": 0.2131,
+      "lift_at_10": 1.4559
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-04",
+      "orders": 6624,
+      "late_rate": 0.0462,
+      "roc_auc": 0.69,
+      "pr_auc": 0.1061,
+      "lift_at_10": 2.85
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-05",
+      "orders": 6940,
+      "late_rate": 0.0654,
+      "roc_auc": 0.7031,
+      "pr_auc": 0.1451,
+      "lift_at_10": 2.6557
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-06",
+      "orders": 6094,
+      "late_rate": 0.0117,
+      "roc_auc": 0.7116,
+      "pr_auc": 0.0446,
+      "lift_at_10": 3.7079
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-07",
+      "orders": 6021,
+      "late_rate": 0.0321,
+      "roc_auc": 0.6158,
+      "pr_auc": 0.0622,
+      "lift_at_10": 2.2283
+    },
+    {
+      "variant": "retrain_lgbm_noproxy",
+      "month": "2018-08",
+      "orders": 5038,
+      "late_rate": 0.075,
+      "roc_auc": 0.3866,
+      "pr_auc": 0.0574,
+      "lift_at_10": 0.5738
+    }
+  ],
+  "proxy_features_dropped": [
+    "approve_month",
+    "days_to_next_holiday",
+    "holidays_in_promise_window",
+    "is_black_friday_window"
+  ]
+}

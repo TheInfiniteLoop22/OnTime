@@ -88,6 +88,13 @@ def stage_monitor() -> None:
     run_monitor()
 
 
+def stage_rolling() -> None:
+    """Rolling-origin retraining backtest (v2 study): monthly retrain, calendar-proxy ablation."""
+    from ontime.models.rolling import run_rolling
+
+    run_rolling()
+
+
 def stage_report() -> None:
     """Generate README.md and reports/model_card.md from the result files."""
     from ontime.reporting.render import build_reports
@@ -103,6 +110,7 @@ def stage_train() -> None:
 
 
 STAGES = {
+    "rolling": stage_rolling,
     "monitor": stage_monitor,
     "report": stage_report,
     "explain": stage_explain,
