@@ -95,9 +95,12 @@ def build_bundle(dest: Path) -> dict:
 
 
 def _git(cwd: Path, *args: str) -> str:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
-    ).stdout
+    r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(
+            f"git {' '.join(args[:3])} failed ({r.returncode}): {r.stderr.strip()[:600]}"
+        )
+    return r.stdout
 
 
 def publish_deploy_branch(push: bool = True, branch: str = "deploy") -> dict:
